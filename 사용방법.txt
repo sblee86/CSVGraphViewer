@@ -131,3 +131,9 @@ CSV 파싱/직렬화 왕복, 한글, BOM, 빈 셀, 0, 지수 표기, 인용부�
 개발 시 단일 HTML 갱신
 - source/ 수정 후 python scripts/build_standalone.py로 CSVtoGraphViewer.html을 갱신합니다.
 - 브라우저 회귀 검증: Python playwright와 Chromium이 있는 환경에서 python tests/browser_template_smoke.py.
+
+양식 선택 삭제
+- 양식 목록 왼쪽 체크박스로 삭제할 양식을 고른 뒤 목록 위의 선택 삭제 버튼을 누릅니다.
+- 확인 후 작업폴더/양식/ 아래의 선택한 JSON 파일만 삭제합니다. 하위폴더 양식도 지원합니다.
+- 검색으로 숨겨진 선택도 선택 개수에 포함되며 함께 삭제합니다. 확인창에 전체 경로가 표시됩니다.
+- CSV 원본과 현재 표시 중인 그래프는 유지합니다. 삭제 실패한 양식은 선택을 유지하고 오류를 알립니다.

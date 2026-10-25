@@ -58,6 +58,38 @@ with sync_playwright() as p:
   template=json.loads((root/'양식/3D/3D-궤적.json').read_text())
   page.evaluate('(t)=>openWorkspaceTemplate(t)',template)
   assert page.locator('#dimension').input_value()=='3d'
+  page.evaluate("""()=>{
+   window.deleteLog=[];
+   window.templateDisk=new Map(['양식/첫양식.json','양식/하위/둘째양식.json','양식/실패.json'].map(path=>[path,{name:path.includes('둘째')?'둘째':'첫째',path,data:saved}]));
+   function directory(prefix=''){return {getDirectoryHandle:async name=>directory(prefix+name+'/'),removeEntry:async name=>{const path=prefix+name;if(path==='양식/실패.json')throw new DOMException('쓰기 권한 없음','NotAllowedError');if(!templateDisk.has(path))throw new DOMException('없음','NotFoundError');deleteLog.push(path);templateDisk.delete(path)}}}
+   workRoot=directory();workspaceEpoch++;
+   refreshWorkspace=async()=>{templates=[...templateDisk.values()];renderTemplates()};
+   templates=[...templateDisk.values()];renderTemplates();showTab('template');
+   window.previousGraph=csvSources;
+  }""")
+  assert page.locator('#deleteSelectedTemplates').is_disabled()
+  page.locator('[data-check-template="0"]').check()
+  page.once('dialog',lambda d:d.dismiss())
+  page.locator('#deleteSelectedTemplates').click()
+  assert page.evaluate('templateDisk.size')==3
+  page.locator('[data-check-template="1"]').check()
+  page.locator('#templateSearch').fill('둘째')
+  assert page.locator('#templateSelectionCount').inner_text()=='2개 선택'
+  page.once('dialog',lambda d:d.accept())
+  page.locator('#deleteSelectedTemplates').click()
+  page.wait_for_function('!templateDeleteBusy&&templateDisk.size===1')
+  assert page.evaluate("JSON.stringify(deleteLog)===JSON.stringify(['양식/첫양식.json','양식/하위/둘째양식.json'])")
+  assert page.evaluate('csvSources===previousGraph')
+  page.locator('#templateSearch').fill('')
+  page.locator('[data-check-template="0"]').check()
+  page.once('dialog',lambda d:d.accept())
+  page.locator('#deleteSelectedTemplates').click()
+  page.wait_for_function("!templateDeleteBusy&&$('toast').textContent.includes('실패 1개')")
+  assert page.locator('[data-check-template="0"]').is_checked()
+  assert page.evaluate("!deletableTemplatePath('양식/../data.csv')&&!deletableTemplatePath('data.csv')")
+  page.evaluate("workRoot={};renderTemplates()")
+  assert page.locator('#deleteSelectedTemplates').is_disabled()
+  print(entry, ': PASS delete selection, cancel, filtered multi-delete, nested paths, failure retention, workspace isolation')
   assert not errors,errors
   print(entry,': PASS labels, saved file/column refs, click auto-load, relocated paths, duplicate/missing guards, stale read cancellation, legacy 3D')
   page.close()
