@@ -16,12 +16,16 @@ window.renderDataPreview=function(revealPick=false){
  $('previewPageInfo').textContent=count?`${first+1}–${last} / ${count.toLocaleString()}행 · ${previewPage+1}/${pages}쪽`:'데이터 없음';$('previewPrev').disabled=previewPage===0;$('previewNext').disabled=previewPage>=pages-1;$('previewRowJump').max=String(count);$('previewRowJump').disabled=!count;$('previewGo').disabled=!count;
  if(!previewSource){$('table').innerHTML='';previewSelection.textContent='그래프의 데이터 점을 클릭하면 해당 행과 필드를 표시합니다.';return}
  $('table').innerHTML='<table><thead><tr><th>데이터 행</th>'+previewSource.head.map(h=>`<th>${esc(h)}</th>`).join('')+'</tr></thead><tbody>'+previewSource.data.slice(first,last).map((_,i)=>{const localRow=first+i;return `<tr data-preview-row="${localRow}"><td>${localRow+1}</td>`+previewSource.head.map((_,col)=>previewCellHTML(previewSource,localRow,col)).join('')+'</tr>'}).join('')+'</tbody></table>';
- previewSelection.textContent=previewPicked?`선택: ${sourceLabel(previewPicked.source)} · 데이터 ${previewPicked.localRow+1}행 · ${previewPicked.columns.map(i=>previewPicked.source.head[i]).join(', ')} (해당 셀 값만 굵게 표시)`:'그래프의 데이터 점을 클릭하면 해당 행과 필드를 표시합니다. 행 번호는 제목 행을 제외한 데이터 순서입니다.';
- if(revealPick&&previewPicked&&previewPicked.source===previewSource){const cell=$('table').querySelector('.pickedValue');if(cell){const outer=$('table').getBoundingClientRect(),rect=cell.getBoundingClientRect(),header=$('table').querySelector('thead').getBoundingClientRect().height;
- // Scroll only the preview's internal viewport. Never focus or scroll the page.
- if(rect.top<outer.top+header)$('table').scrollTop-=outer.top+header-rect.top+8;else if(rect.bottom>outer.bottom)$('table').scrollTop+=rect.bottom-outer.bottom+8;
- if(rect.left<outer.left)$('table').scrollLeft-=outer.left-rect.left+8;else if(rect.right>outer.right)$('table').scrollLeft+=rect.right-outer.right+8;
- }}
+ previewSelection.textContent=previewPicked?`선택: ${sourceLabel(previewPicked.source)} · 데이터 ${previewPicked.localRow+1}행 · ${previewPicked.columns.map(i=>previewPicked.source.head[i]).join(', ')} (선택 값: 빨간색·굵게·확대)`:'그래프의 데이터 점을 클릭하면 해당 행과 필드를 표시합니다. 행 번호는 제목 행을 제외한 데이터 순서입니다.';
+ // Wait for the details panel to finish opening before measuring its cells.
+ if(revealPick&&previewPicked&&previewPicked.source===previewSource){const pick=previewPicked;requestAnimationFrame(()=>requestAnimationFrame(()=>{if(previewPicked!==pick||previewSource!==pick.source||!dataPreview.open)return;const cells=[...$('table').querySelectorAll('.pickedValue')];if(cells.length){const box=$('table'),outer=box.getBoundingClientRect(),rects=cells.map(cell=>cell.getBoundingClientRect()),header=box.querySelector('thead').getBoundingClientRect().height;
+ // Center the selected cells inside the table viewport, excluding its sticky header.
+ // Only mutate this scroll container: never focus or scroll any ancestor.
+ const centerX=(Math.min(...rects.map(r=>r.left))+Math.max(...rects.map(r=>r.right)))/2;
+ const centerY=(rects[0].top+rects[0].bottom)/2;
+ box.scrollTop+=centerY-(outer.top+box.clientTop+header+(box.clientHeight-header)/2);
+ box.scrollLeft+=centerX-(outer.left+box.clientLeft+box.clientWidth/2);
+ }}))}
 };
 function showPreviewHit(hit){if(!validPreviewPick(hit))return;previewPicked=hit;previewSource=hit.source;previewPage=Math.floor(hit.localRow/previewPageSize);dataPreview.open=true;window.renderDataPreview(true)}
 $('previewSource').onchange=()=>{previewSource=csvSources[+$('previewSource').value]||null;previewPage=0;window.renderDataPreview();$('table').scrollTop=0};
