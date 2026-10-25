@@ -3,7 +3,7 @@
 let csvSources=[],columnMeta=[],multiReadSequence=0;
 const singleLoad=load,singleUpdate=update,singleCapture=captureTemplate,singleApplyTemplate=applyTemplate;
 function parseSource(text,path,buffer=null){const data=parseCSV(text,$('delimiter').value);if(data.length<2)throw Error('제목 행과 데이터 행이 필요합니다.');const head=data.shift().map((h,i)=>h.trim()||`열 ${i+1}`);const bad=data.findIndex(r=>r.length!==head.length);if(bad>=0)throw Error(`${bad+2}행의 열 수가 다릅니다.`);const numeric=head.map((_,i)=>data.some(r=>Number.isFinite(num(r[i]))));if(!numeric.some(Boolean))throw Error('숫자 열이 없습니다.');return {path,head,data,numeric,buffer,x:numeric.indexOf(true)}}
-function sourceLabel(source){return source.displayPath||source.path}
+function sourceLabel(source){return source.path}
 function sourceColumnRef(source,index){return {file:source.path,column:source.head[index],occurrence:source.head.slice(0,index).filter(h=>h===source.head[index]).length}}
 function columnRef(index){const m=columnMeta[index];if(!m)return null;return {...sourceColumnRef(csvSources[m.source],m.local),name:headers[index]}}
 function findColumn(ref){if(ref?.row)return -1;if(!ref)return null;if(typeof ref.file==='string'&&typeof ref.column==='string'){const i=columnMeta.findIndex(m=>{const s=csvSources[m.source],r=sourceColumnRef(s,m.local);return r.file===ref.file&&r.column===ref.column&&r.occurrence===(ref.occurrence||0)});return i<0?null:i}const exact=headers.map((h,i)=>h===ref.name?i:-1).filter(i=>i>=0);if(exact.length)return exact[ref.occurrence||0]??null; // Backward-compatible single-file templates.
