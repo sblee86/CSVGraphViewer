@@ -31,6 +31,13 @@ $('templatePanel').querySelector('.help').textContent='작업폴더의 양식/ �
 $('openTemplates').textContent='양식 가져오기';
 // Remove only the empty marketing heading; keep zoom/pan controls above the plot.
 const heading=document.querySelector('.heading');heading.firstElementChild.remove();heading.classList.add('graphInteractionBar');
+// Keep the four live metrics and graph interactions on a single compact row.
+heading.classList.add('graphSummaryBar');heading.prepend(document.querySelector('.metrics'));
+const autoBounds=document.createElement('button');autoBounds.id='autoAxisBounds';autoBounds.type='button';autoBounds.textContent='축 범위 자동';
+autoBounds.title='수동 축 범위와 확대·이동을 초기화합니다. 조건 필터는 유지합니다.';
+autoBounds.onclick=()=>{if($('dimension').value==='3d'){scale3=1;offset3=[0,0]}reset()};
+heading.querySelector('.mode').append(autoBounds);
+
 showTab('data');
 
 // Graph controls have a second tab row so the sidebar stays short.
