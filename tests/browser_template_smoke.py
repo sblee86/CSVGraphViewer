@@ -52,12 +52,27 @@ with sync_playwright() as p:
    await openWorkspaceTemplate(legacy);finish();await pending;
    if(csvSources!==previous)throw Error('stale request replaced graph');
   }''')
-  # Load provided real data and preserve backwards-compatible 3D templates.
-  page.locator('#file').set_input_files(str(root/'예제_3D_궤적.csv'))
+  # Generate CSV in memory; no shipped demo files are needed.
+  payload='T,X,Y,Z\n'+'\n'.join(f'{i},{i+1},{i+2},{i+3}' for i in range(1000))
+  page.locator('#file').set_input_files({'name':'records.csv','mimeType':'text/csv','buffer':payload.encode()})
   page.wait_for_function('rows.length>=1000')
-  template=json.loads((root/'양식/3D/3D-궤적.json').read_text())
+  template={'format':'atelier-csv-scope','version':1,'name':'Legacy 3D','dimension':'3d','x':{'name':'X'},'y':{'name':'Y'},'z':{'name':'Z'},'t':{'name':'T'},'selected':[{'name':'Y'},{'name':'Z'}],'conditions':[],'selection':'multi','layout':'overlay','style':'line','timeMode':'all'}
   page.evaluate('(t)=>openWorkspaceTemplate(t)',template)
   assert page.locator('#dimension').input_value()=='3d'
+  page.locator('#templateTab').click()
+  page.locator('#clearCurrentTemplate').click()
+  assert page.evaluate("templatePending===null&&$('templateName').value===''&&$('dimension').value==='2d'&&rows.length>=1000&&conditions.length===0&&view===null&&manualY===null")
+  assert page.locator('#currentTemplateState').inner_text()=='양식 미적용'
+  assert page.locator('#demo').count()==0
+  for button in ['openTemplates','openFolder','workspaceChange','workspaceRefresh']:
+   assert page.evaluate('(id)=>getComputedStyle($(id)).borderTopStyle!==\"none\"',button)
+  page.evaluate('''async()=>{
+   const sources=csvSources;let finish;
+   workspaceCsv=[{path:'slow.csv',handle:{getFile:()=>new Promise(resolve=>finish=()=>resolve(new File(['T,Y\\n0,1'],'slow.csv')))}}];
+   const pending=openWorkspaceTemplate({...saved,files:['slow.csv'],fileX:[],selected:[],x:{row:true},y:null,z:null,t:{row:true},conditions:[]});
+   $('clearCurrentTemplate').click();finish();await pending;
+   if(csvSources!==sources||templatePending!==null)throw Error('Template reset did not cancel async load');
+  }''')
   page.evaluate("""()=>{
    window.deleteLog=[];
    window.templateDisk=new Map(['양식/첫양식.json','양식/하위/둘째양식.json','양식/실패.json'].map(path=>[path,{name:path.includes('둘째')?'둘째':'첫째',path,data:saved}]));

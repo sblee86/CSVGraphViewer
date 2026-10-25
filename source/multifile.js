@@ -20,7 +20,7 @@ function rebuildSources(preserve=true){stopPlayback();const prior=preserve?[...s
  const label=csvSources.length===1?csvSources[0].path:`CSV ${csvSources.length}개`;$('filename').textContent=label;$('filelabel').textContent=label;$('filesub').textContent=`${rows.length.toLocaleString()}행 · ${headers.length}열 (파일별 독립 X축)`;$('colcount').textContent=headers.length;$('search').value='';
  renderLoadedSources();renderFileX();renderColumns();renderFilters();update();if(templatePending)applyTemplate(templatePending)
 }
-// Keep existing callers (demo and encoding reload) usable with the new data model.
+// Keep existing callers (file loads and encoding reload) usable with the new data model.
 load=function(text,path){csvSources=[parseSource(text,path,lastBuffer)];rebuildSources(false)};
 async function addSourceFiles(entries){const sequence=++multiReadSequence;let pending=[],errors=[];for(const entry of entries){try{const f=entry.file||await entry.handle.getFile(),buffer=await f.arrayBuffer();const source=parseSource(new TextDecoder($('encoding').value).decode(buffer),entry.path||f.webkitRelativePath||f.name,buffer);source.displayPath=entry.displayPath||(entry.handle&&workRoot?workRoot.name+'/'+source.path:source.path);pending.push(source)}catch(e){errors.push((entry.path||entry.file?.name||'파일')+': '+e.message)}}if(sequence!==multiReadSequence)return;if(!pending.length){showMultiWarning(errors.join(' · '));return}const updated=[...csvSources];for(const s of pending){const i=updated.findIndex(v=>v.path===s.path);if(i>=0)updated[i]=s;else updated.push(s)}
  // Capture selected identities before replacing sources, so index changes cannot
