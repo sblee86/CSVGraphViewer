@@ -34,6 +34,9 @@ with sync_playwright() as p:
    if(previewPage!==1)throw Error('Wrong page');
    const strong=$('table').querySelector('.pickedValue strong'),css=getComputedStyle(strong),plain=getComputedStyle($('table').querySelector('td:not(.pickedValue)'));
    if(css.color!=='rgb(229, 57, 53)'||+css.fontWeight<800||parseFloat(css.fontSize)<=parseFloat(plain.fontSize))throw Error('Wrong highlight');
+   const selectedRow=strong.closest('tr'),normal=$('table').querySelector('tr:not(.pickedRow) td');
+   for(const cell of selectedRow.cells){const style=getComputedStyle(cell);if(+style.fontWeight<700||Math.abs(parseFloat(style.fontSize)-parseFloat(getComputedStyle(normal).fontSize)-4/3)>.03)throw Error('Row highlight incorrect')}
+   if(selectedRow.querySelectorAll('.pickedValue').length!==1)throw Error('Red selection spread to row');
    const color=css.color,fontSize=css.fontSize;
    showPreviewHit({source:csvSources[0],localRow:145,columns:[10,11,12]});await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));checkCenter();
    for(const row of [100,199]){

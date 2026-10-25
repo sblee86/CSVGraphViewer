@@ -20,6 +20,8 @@ with sync_playwright() as p:
    if(!['total','filtered','signals','extent','zoom','pan','autoAxisBounds'].every(id=>bar.contains($(id))))throw Error('Missing summary control');
    const centers=[...bar.querySelectorAll('.metrics>div,.mode')].map(e=>{const r=e.getBoundingClientRect();return r.top+r.height/2});
    if(Math.max(...centers)-Math.min(...centers)>2)throw Error('Not one row');
+   if(JSON.stringify([...bar.querySelectorAll('.mode button')].map(b=>b.id))!==JSON.stringify(['autoAxisBounds','applyUserAxisBounds','zoom','pan']))throw Error('Wrong action order');
+   if([...bar.querySelectorAll('.metrics small')].some(e=>!e.textContent.endsWith(':')))throw Error('Missing metric colon');
    window.originalBarHeight=bar.getBoundingClientRect().height;
    window.settingsText='';workRoot={getFileHandle:async()=>({createWritable:async()=>({write:async text=>settingsText=text,close:async()=>{}}),getFile:async()=>({text:async()=>settingsText})})};
    conditions=[{col:1,min:'2',max:''}];view=[.5,1.5];manualY=[1,2];$('xmin').value='.5';update();
@@ -27,7 +29,14 @@ with sync_playwright() as p:
   page.locator('#pan').click();assert page.evaluate('pan')
   page.locator('#zoom').click();assert not page.evaluate('pan')
   page.locator('#autoAxisBounds').click()
-  assert page.evaluate("view===null&&manualY===null&&$('xmin').value===''&&conditions.length===1&&filtered.length===2")
+  assert page.evaluate("view===null&&manualY===null&&$('xmin').value==='.5'&&conditions.length===1&&filtered.length===2")
+  page.evaluate("$('xmin').value='0';$('xmax').value='3';$('ymin').value='1';$('ymax').value='5'")
+  page.locator('#applyUserAxisBounds').click()
+  assert page.evaluate('JSON.stringify(view)==="[0,3]"&&JSON.stringify(manualY)==="[1,5]"')
+  page.locator('#autoAxisBounds').click()
+  assert page.evaluate("view===null&&manualY===null&&$('xmax').value==='3'")
+  page.locator('#applyUserAxisBounds').click()
+  assert page.evaluate('JSON.stringify(view)==="[0,3]"')
   page.evaluate("$('dimension').value='3d';scale3=4;offset3=[50,50];angleYaw=.8;draw()")
   page.locator('#autoAxisBounds').click()
   assert page.evaluate('scale3===1&&offset3.every(v=>v===0)&&angleYaw===.8')
@@ -42,6 +51,7 @@ with sync_playwright() as p:
   page.evaluate('viewerPrefs={...viewerDefaults}')
   page.evaluate('readWorkspaceSettings(workRoot)')
   assert page.evaluate("viewerPrefs.summarySize===65&&document.body.style.getPropertyValue('--summary-scale')==='0.65'&&normalizePrefs({uiSize:13}).summarySize===100")
+  page.evaluate('''()=>{for(const button of document.querySelectorAll('.graphSummaryBar .mode button')){const text=button.querySelector('.graphActionLabel'),css=getComputedStyle(button),expected=(text.getBoundingClientRect().width+parseFloat(css.paddingLeft)+parseFloat(css.paddingRight))*1.2;if(Math.abs(button.getBoundingClientRect().width-expected)>2)throw Error('Incorrect button width')}}''')
   # At narrow widths controls remain in one horizontally scrollable row.
   page.set_viewport_size({'width':800,'height':900})
   assert page.evaluate("getComputedStyle(document.querySelector('.graphSummaryBar')).flexWrap==='nowrap'&&getComputedStyle(document.querySelector('.graphSummaryBar')).overflowX==='auto'")
