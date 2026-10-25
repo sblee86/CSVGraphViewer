@@ -92,3 +92,24 @@ async function deleteSelectedTemplates(){
 $('deleteSelectedTemplates').onclick=()=>void deleteSelectedTemplates();
 $('templateSearch').oninput=renderTemplates;
 renderTemplates();
+
+// Start a fresh analysis without changing the CSV files or saved templates.
+const clearTemplateButton=document.createElement('button');clearTemplateButton.id='clearCurrentTemplate';clearTemplateButton.textContent='양식 해제';clearTemplateButton.className='sidebarAction';
+const templateState=document.createElement('p');templateState.id='currentTemplateState';templateState.setAttribute('role','status');
+$('saveTemplate').after(clearTemplateButton,templateState);
+function updateCurrentTemplateState(){templateState.textContent=templatePending?'현재 양식: '+templatePending.name:'양식 미적용'}
+const applyTemplateBeforeStatus=applyTemplate;
+applyTemplate=function(v){applyTemplateBeforeStatus(v);updateCurrentTemplateState()};
+const renderTemplatesBeforeStatus=renderTemplates;
+renderTemplates=function(){renderTemplatesBeforeStatus();updateCurrentTemplateState()};
+$('templateSearch').oninput=renderTemplates;
+clearTemplateButton.onclick=()=>{
+ workspaceTemplateRequest++;multiReadSequence++;stopPlayback();templatePending=null;$('templateName').value='';
+ for(const [id,value] of [['dimension','2d'],['layout','overlay'],['style','line'],['selection','multi'],['timeMode','all']])$(id).value=value;
+ angleYaw=.65;anglePitch=.45;scale3=1;offset3=[0,0];$('timeSlider').value=0;
+ for(const id of ['xmin','xmax','ymin','ymax','applybounds'])$(id).disabled=false;
+ for(const source of csvSources){source.x=source.numeric.indexOf(true);previewTableStates.delete(source)}
+ previewPicked=null;rebuildSources(false);showMultiWarning('');checkedTemplatePaths.clear();renderTemplates();notice('양식을 해제하고 기본 그래프 설정으로 돌아왔습니다.');
+};
+for(const id of ['openTemplates','openFolder','workspaceChange','workspaceRefresh'])$(id).classList.add('sidebarAction');
+updateCurrentTemplateState();

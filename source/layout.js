@@ -8,7 +8,7 @@ const originalDataElements=[...dataNodes];
 sidebar.append(dataPanel,graphPanel);
 // Folder location and actions now live only in the Data tab.
 workspaceBar.classList.add('sidebarWorkspace');dataPanel.append(workspaceBar);
-const csvActions=document.createElement('div');csvActions.className='sidebarActions';csvActions.append($('open'),$('demo'));dataPanel.append(csvActions);
+const csvActions=document.createElement('div');csvActions.className='sidebarActions';csvActions.append($('open'));dataPanel.append(csvActions);
 const inputOptions=$('encoding').closest('.group');inputOptions.classList.add('sidebarOptions');dataPanel.append(inputOptions);
 dataPanel.append(csvPanel);
 for(const node of originalDataElements){if(node===csvPanel)continue;if(node.classList.contains('panelhead')||node.classList.contains('filecard'))dataPanel.append(node);else graphPanel.append(node)}
