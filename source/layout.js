@@ -35,8 +35,16 @@ const heading=document.querySelector('.heading');heading.firstElementChild.remov
 heading.classList.add('graphSummaryBar');heading.prepend(document.querySelector('.metrics'));
 const autoBounds=document.createElement('button');autoBounds.id='autoAxisBounds';autoBounds.type='button';autoBounds.textContent='축 범위 자동';
 autoBounds.title='수동 축 범위와 확대·이동을 초기화합니다. 조건 필터는 유지합니다.';
-autoBounds.onclick=()=>{if($('dimension').value==='3d'){scale3=1;offset3=[0,0]}reset()};
-heading.querySelector('.mode').append(autoBounds);
+autoBounds.onclick=()=>{view=null;manualY=null;if($('dimension').value==='3d'){scale3=1;offset3=[0,0]}draw()};
+const customBounds=document.createElement('button');customBounds.id='applyUserAxisBounds';customBounds.type='button';customBounds.textContent='사용자 축 설정 적용';
+customBounds.title='그래프설정의 스케일·값 범위에 입력한 X/Y 범위를 적용합니다 (2D).';
+customBounds.onclick=()=>{if($('dimension').value==='3d')return notice('사용자 축 범위는 2D 그래프에서 적용할 수 있습니다.');$('applybounds').click()};
+$('zoom').lastChild.textContent=' 확대';
+const graphModeButtons=heading.querySelector('.mode');graphModeButtons.replaceChildren(autoBounds,customBounds,$('zoom'),$('pan'));
+for(const label of heading.querySelectorAll('.metrics small'))label.textContent=label.textContent.replace(/[:：]\s*$/,'')+':';
+// Grow each button to 120% of its label's natural width plus normal padding.
+const graphActionSizer=new ResizeObserver(entries=>{for(const {target} of entries){const button=target.parentElement,css=getComputedStyle(button),padding=parseFloat(css.paddingLeft)+parseFloat(css.paddingRight);button.style.width=Math.ceil((target.getBoundingClientRect().width+padding)*1.2)+'px'}});
+for(const button of graphModeButtons.children){const label=document.createElement('span');label.className='graphActionLabel';label.append(...button.childNodes);button.append(label);graphActionSizer.observe(label)}
 
 showTab('data');
 
