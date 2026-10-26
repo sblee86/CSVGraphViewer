@@ -46,6 +46,12 @@ for(const label of heading.querySelectorAll('.metrics small'))label.textContent=
 const graphActionSizer=new ResizeObserver(entries=>{for(const {target} of entries){const button=target.parentElement,css=getComputedStyle(button),padding=parseFloat(css.paddingLeft)+parseFloat(css.paddingRight);button.style.width=Math.ceil((target.getBoundingClientRect().width+padding)*1.2)+'px'}});
 for(const button of graphModeButtons.children){const label=document.createElement('span');label.className='graphActionLabel';label.append(...button.childNodes);button.append(label);graphActionSizer.observe(label)}
 
+const quickLayoutLabel=document.createElement('label');quickLayoutLabel.className='quickGraphLayout';quickLayoutLabel.title='체크: 신호별 개별 그래프 / 해제: 한 그래프에 겹쳐 보기 (2D)';
+quickLayoutLabel.innerHTML='<input type="checkbox" id="quickGraphSplit"><span>신호별 개별 보기</span>';autoBounds.before(quickLayoutLabel);
+function syncQuickGraphLayout(){const box=$('quickGraphSplit');box.checked=$('layout').value==='split';box.disabled=$('dimension').value==='3d'}
+$('quickGraphSplit').onchange=()=>{$('layout').value=$('quickGraphSplit').checked?'split':'overlay';draw()};
+$('layout').onchange=()=>draw();
+const drawBeforeQuickGraphLayout=draw;draw=function(){syncQuickGraphLayout();drawBeforeQuickGraphLayout()};syncQuickGraphLayout();
 showTab('data');
 
 // Graph controls have a second tab row so the sidebar stays short.
