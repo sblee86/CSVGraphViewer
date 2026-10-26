@@ -61,6 +61,35 @@ seriesRows=function(col){const meta=columnMeta[col];return meta?filtered.filter(
 // Sorting by T must not interleave unrelated files into a broken 2D line.
 ordered=function(){const ti=+$('taxis').value,ref=columnMeta[ti];return filtered.map(r=>{const s=csvSources[r.row._source];let local=-1;if(ref){const ts=csvSources[ref.source],same=s.head.map((h,i)=>h===ts.head[ref.local]?i:-1).filter(i=>i>=0);const occurrence=ts.head.slice(0,ref.local).filter(h=>h===ts.head[ref.local]).length;local=same[occurrence]??-1}return {r,t:ti===-1||local<0?r.row._localIndex+1:num(r.row[s.offset+local])}}).filter(o=>Number.isFinite(o.t)).filter(o=>$('dimension').value!=='3d'||!columnMeta[+$('x').value]||o.r.row._source===columnMeta[+$('x').value].source).sort((a,b)=>a.t-b.t||a.r.row._localIndex-b.r.row._localIndex)};
 const priorPointerMove=$('plot').onpointermove;
-$('plot').onpointermove=e=>{if(drag)return priorPointerMove(e);const c=coords(e),p=panelAt(c);if(!p){$('tooltip').style.display='none';return}const x=world(c.x,p),lines=[];for(const col of p.series){let nearest=null,d=Infinity;for(const r of seriesRows(col)){const value=num(r.row[col]),delta=Math.abs(point(r)-x);if(Number.isFinite(value)&&delta<d){nearest=r;d=delta}}if(nearest)lines.push(headers[col]+': '+fmt(num(nearest.row[col]))+' · X '+fmt(point(nearest))+' · 행 '+(nearest.row._localIndex+1))}if(!lines.length){$('tooltip').style.display='none';return}$('tooltip').textContent=lines.join('\n');$('tooltip').style.display='block';$('tooltip').style.left=Math.max(0,Math.min(c.x+14,$('plot').clientWidth-230))+'px';$('tooltip').style.top=Math.max(0,c.y-65)+'px'};
+function nearestHoveredSignal(c,p){
+ const limit=Math.max(10,viewerPrefs.lineWidth+5,viewerPrefs.pointSize+5),visible=previewVisibleRows();let best=null;
+ const consider=(col,r,distance,pointDistance)=>{if(distance>limit*limit)return;if(!best||distance<best.distance-1e-6||Math.abs(distance-best.distance)<1e-6&&pointDistance<best.pointDistance)best={col,r,distance,pointDistance}};
+ for(const col of p.series){
+  const meta=columnMeta[col];if(!meta)continue;let previous=null;
+  for(const r of visible){
+   if(r.row._source!==meta.source)continue;
+   const x=point(r),y=num(r.row[col]);if(!Number.isFinite(x)||!Number.isFinite(y)){previous=null;continue}
+   const q={x:p.left+(x-p.xr[0])/(p.xr[1]-p.xr[0])*(p.right-p.left),y:p.bottom-(y-p.yr[0])/(p.yr[1]-p.yr[0])*(p.bottom-p.top),r};
+   const distance=(q.x-c.x)**2+(q.y-c.y)**2;
+   if(q.x>=p.left&&q.x<=p.right&&q.y>=p.top&&q.y<=p.bottom)consider(col,r,distance,distance);
+   if(previous&&$('style').value!=='scatter'){
+    const dx=q.x-previous.x,dy=q.y-previous.y,length=dx*dx+dy*dy,t=length?Math.max(0,Math.min(1,((c.x-previous.x)*dx+(c.y-previous.y)*dy)/length)):0;
+    const distanceToLine=(c.x-previous.x-t*dx)**2+(c.y-previous.y-t*dy)**2,near=t<=.5?previous:q;
+    consider(col,near.r,distanceToLine,(near.x-c.x)**2+(near.y-c.y)**2);
+   }
+   previous=q;
+  }
+ }
+ return best;
+}
+$('plot').onpointermove=e=>{
+ if(drag)return priorPointerMove(e);
+ const tip=$('tooltip'),c=coords(e),p=panelAt(c);if(!p||$('dimension').value==='3d'){tip.style.display='none';return}
+ const hit=nearestHoveredSignal(c,p);if(!hit){tip.style.display='none';return}
+ const meta=columnMeta[hit.col],source=csvSources[meta.source];
+ tip.textContent=sourceLabel(source)+' / '+source.head[meta.local]+'\nX '+fmt(point(hit.r))+' · Y '+fmt(num(hit.r.row[hit.col]))+' · 데이터 행 '+(hit.r.row._localIndex+1)+'\n마우스에 가까운 원본 데이터 값';
+ tip.style.display='block';const w=$('plot').clientWidth,h=$('plot').clientHeight;
+ tip.style.left=Math.max(0,Math.min(c.x+14,w-tip.offsetWidth))+'px';tip.style.top=Math.max(0,Math.min(c.y+14,h-tip.offsetHeight))+'px';
+};
 
 $('open').querySelector('span:not(.ui-icon)').textContent='CSV 여러 개 추가';$('x').previousElementSibling.textContent='공통 X열 (동일한 열 이름으로 연결)';
