@@ -1,1 +1,353 @@
-<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CSVtoGraphViewer</title><link rel="stylesheet" href="style.css"><body><div class="app"><header><div class="brand"><span class="logo"><svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="그래프 분석"><path d="M6 5v22h22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m9 21 6-8 5 4 7-10" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="15" cy="13" r="2" fill="currentColor"/><circle cx="20" cy="17" r="2" fill="currentColor"/><circle cx="27" cy="7" r="2" fill="currentColor"/></svg></span> CSVtoGraphViewer</div><span id="filename">새 분석 작업</span><div class="spacer"></div><span class="local">버전 정보</span><button id="theme">◐ 테마</button></header><nav><b>파일</b><span class="active">데이터 분석</span><span>시각화 작업 공간</span><button id="settingsOpen">⚙ 설정</button><small>ATELIER / DATA TOOLS</small></nav><div class="ribbon"><div class="group"><button class="big primary" id="open">▤<span>CSV 불러오기</span></button><small>데이터</small></div><div class="group controls"><label>문자 인코딩<select id="encoding"><option value="utf-8">UTF-8</option><option value="euc-kr">CP949 / EUC-KR</option></select></label><label>구분자<select id="delimiter"><option value="auto">자동 감지</option><option value=",">쉼표 (,)</option><option value=";">세미콜론 (;)</option><option value="tab">탭</option></select></label></div><div class="group controls"><label>그래프 배치<select id="layout"><option value="overlay">한 그래프에 겹치기</option><option value="split">신호별 개별 그래프</option></select></label><label>표현 방식<select id="style"><option value="line">선 그래프</option><option value="scatter">산점도</option><option value="both">선 + 점</option></select></label></div><div class="group"><button class="big" id="reset">⊞<span>전체 보기</span></button><button class="big" id="png">▧<span>PNG 저장</span></button><button class="big" id="export">↓<span>필터 CSV 저장</span></button><small>보기 및 내보내기</small></div></div><div class="work"><aside id="left"><div class="panelhead">데이터 탐색기 <span id="colcount"></span></div><div class="filecard">▤ <b id="filelabel">CSV 파일을 선택하세요</b><small id="filesub">첫 번째 행을 열 제목으로 사용합니다.</small></div><label class="caption">X축 기준</label><select id="x"></select><div class="row caption">Y축 신호 <select id="selection"><option value="multi">복수 선택</option><option value="single">단일 선택</option></select></div><input id="search" placeholder="열 제목 검색…"><div class="row"><button id="all">모두 선택</button><button id="none">선택 해제</button><span id="selectedCount"></span></div><div id="columns"></div><div class="hint">휠: 확대·축소<br>드래그: 영역 확대<br>가운데 버튼 드래그: 위치 이동<br>이동 모드: 왼쪽 드래그로 이동<br>더블클릭: 전체 보기</div></aside><div class="resize" id="resize"></div><main><div class="docbar"><b>신호 분석</b><span id="dataSummary">데이터 준비</span></div><div class="content"><div class="heading"><div><small>DATA VISUALIZATION</small><h1>신호 분석 워크스페이스</h1><p>열을 선택하고, 데이터 속 패턴을 살펴보세요.</p></div><div class="mode"><button class="on" id="zoom">⌕ 영역 확대</button><button id="pan">✥ 이동</button></div></div><div class="metrics"><div><small>전체 행</small><b id="total">—</b></div><div><small>조건 통과 행</small><b id="filtered">—</b></div><div><small>선택 신호</small><b id="signals">—</b></div><div><small>보기 범위 · X</small><b id="extent">자동</b></div></div><div class="plotcard"><div class="plothead"><b id="plotTitle">신호 그래프</b><span id="legend"></span></div><div id="plotwrap"><canvas id="plot"></canvas><div id="tooltip"></div></div><div class="plotfoot"><span id="plotnote">CSV 파일을 불러오세요.</span><span>SCROLL TO ZOOM · DOUBLE CLICK TO RESET</span></div></div><details class="preview"><summary>데이터 미리보기 <span>조건 적용 결과 · 처음 100행</span></summary><div id="table"></div></details></div></main><aside class="right"><div class="panelhead">조건 범위 <span>FILTER</span></div><p class="help">열별 최소·최대 범위에 포함되는 행만 표시합니다. 여러 조건은 AND로 적용됩니다.</p><button class="outline" id="addfilter">＋ 조건 추가</button><div id="filters"></div><button id="clearfilters">모든 조건 지우기</button><hr><div class="panelhead">축 범위 직접 지정</div><div class="bounds"><label>X 최소<input id="xmin" type="number" step="any" placeholder="자동"></label><label>X 최대<input id="xmax" type="number" step="any" placeholder="자동"></label><label>Y 최소<input id="ymin" type="number" step="any" placeholder="자동"></label><label>Y 최대<input id="ymax" type="number" step="any" placeholder="자동"></label></div><button class="solid" id="applybounds">축 범위 적용</button><p class="help">빈 칸은 데이터 범위로 맞춥니다. 개별 그래프에서는 Y 범위를 공통으로 적용합니다.</p><hr><div class="panelhead">선택 신호 통계</div><div id="stats"></div></aside></div><footer><span id="status">준비됨</span><span>CSVtoGraphViewer</span></footer></div><input hidden type="file" id="file" accept=".csv,.tsv,.txt"><div id="toast" role="status"></div><script src="app.js"></script><script src="extra.js"></script><script src="settings.js"></script><script src="workspace.js"></script><script src="layout.js"></script><script src="multifile.js"></script><script src="preview-filters.js"></script><script src="preview-link.js"></script><script src="template-workspace.js"></script><script src="export-help.js"></script><script src="export-browser.js"></script><script src="build-info.js"></script><script src="panel-layout.js"></script></body></html>
+<!doctype html>
+<html lang="ko">
+  <meta charset="utf-8" />
+  <meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  />
+  <title>CSVtoGraphViewer</title>
+  <link
+    rel="stylesheet"
+    href="style.css"
+  />
+  <body>
+    <div class="app">
+      <header>
+        <div class="brand">
+          <span class="logo">
+            <svg
+              viewBox="0 0 32 32"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              role="img"
+              aria-label="그래프 분석"
+            >
+              <path
+                d="M6 5v22h22"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+              <path
+                d="m9 21 6-8 5 4 7-10"
+                stroke="currentColor"
+                stroke-width="2.4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <circle
+                cx="15"
+                cy="13"
+                r="2"
+                fill="currentColor"
+              />
+              <circle
+                cx="20"
+                cy="17"
+                r="2"
+                fill="currentColor"
+              />
+              <circle
+                cx="27"
+                cy="7"
+                r="2"
+                fill="currentColor"
+              />
+            </svg>
+          </span>
+          CSVtoGraphViewer
+        </div>
+        <span id="filename">새 분석 작업</span>
+        <div class="spacer"></div>
+        <span class="local">버전 정보</span>
+        <button id="theme">◐ 테마</button>
+      </header>
+      <nav>
+        <b>파일</b>
+        <span class="active">데이터 분석</span>
+        <span>시각화 작업 공간</span>
+        <button id="settingsOpen">⚙ 설정</button>
+        <small>ATELIER / DATA TOOLS</small>
+      </nav>
+      <div class="ribbon">
+        <div class="group">
+          <button
+            class="big primary"
+            id="open"
+          >
+            ▤
+            <span>CSV 불러오기</span>
+          </button>
+          <small>데이터</small>
+        </div>
+        <div class="group controls">
+          <label>
+            문자 인코딩
+            <select id="encoding">
+              <option value="utf-8">UTF-8</option>
+              <option value="euc-kr">CP949 / EUC-KR</option>
+            </select>
+          </label>
+          <label>
+            구분자
+            <select id="delimiter">
+              <option value="auto">자동 감지</option>
+              <option value=",">쉼표 (,)</option>
+              <option value=";">세미콜론 (;)</option>
+              <option value="tab">탭</option>
+            </select>
+          </label>
+        </div>
+        <div class="group controls">
+          <label>
+            그래프 배치
+            <select id="layout">
+              <option value="overlay">한 그래프에 겹치기</option>
+              <option value="split">신호별 개별 그래프</option>
+            </select>
+          </label>
+          <label>
+            표현 방식
+            <select id="style">
+              <option value="line">선 그래프</option>
+              <option value="scatter">산점도</option>
+              <option value="both">선 + 점</option>
+            </select>
+          </label>
+        </div>
+        <div class="group">
+          <button
+            class="big"
+            id="reset"
+          >
+            ⊞
+            <span>전체 보기</span>
+          </button>
+          <button
+            class="big"
+            id="png"
+          >
+            ▧
+            <span>PNG 저장</span>
+          </button>
+          <button
+            class="big"
+            id="export"
+          >
+            ↓
+            <span>필터 CSV 저장</span>
+          </button>
+          <small>보기 및 내보내기</small>
+        </div>
+      </div>
+      <div class="work">
+        <aside id="left">
+          <div class="panelhead">
+            데이터 탐색기
+            <span id="colcount"></span>
+          </div>
+          <div class="filecard">
+            ▤
+            <b id="filelabel">CSV 파일을 선택하세요</b>
+            <small id="filesub">첫 번째 행을 열 제목으로 사용합니다.</small>
+          </div>
+          <label class="caption">X축 기준</label>
+          <select id="x"></select>
+          <div class="row caption">
+            Y축 신호
+            <select id="selection">
+              <option value="multi">복수 선택</option>
+              <option value="single">단일 선택</option>
+            </select>
+          </div>
+          <input
+            id="search"
+            placeholder="열 제목 검색…"
+          />
+          <div class="row">
+            <button id="all">모두 선택</button>
+            <button id="none">선택 해제</button>
+            <span id="selectedCount"></span>
+          </div>
+          <div id="columns"></div>
+          <div class="hint">
+            휠: 확대·축소
+            <br />
+            드래그: 영역 확대
+            <br />
+            가운데 버튼 드래그: 위치 이동
+            <br />
+            이동 모드: 왼쪽 드래그로 이동
+            <br />
+            더블클릭: 전체 보기
+          </div>
+        </aside>
+        <div
+          class="resize"
+          id="resize"
+        ></div>
+        <main>
+          <div class="docbar">
+            <b>신호 분석</b>
+            <span id="dataSummary">데이터 준비</span>
+          </div>
+          <div class="content">
+            <div class="heading">
+              <div>
+                <small>DATA VISUALIZATION</small>
+                <h1>신호 분석 워크스페이스</h1>
+                <p>열을 선택하고, 데이터 속 패턴을 살펴보세요.</p>
+              </div>
+              <div class="mode">
+                <button
+                  class="on"
+                  id="zoom"
+                >
+                  ⌕ 영역 확대
+                </button>
+                <button id="pan">✥ 이동</button>
+              </div>
+            </div>
+            <div class="metrics">
+              <div>
+                <small>전체 행</small>
+                <b id="total">—</b>
+              </div>
+              <div>
+                <small>조건 통과 행</small>
+                <b id="filtered">—</b>
+              </div>
+              <div>
+                <small>선택 신호</small>
+                <b id="signals">—</b>
+              </div>
+              <div>
+                <small>보기 범위 · X</small>
+                <b id="extent">자동</b>
+              </div>
+            </div>
+            <div class="plotcard">
+              <div class="plothead">
+                <b id="plotTitle">신호 그래프</b>
+                <span id="legend"></span>
+              </div>
+              <div id="plotwrap">
+                <canvas id="plot"></canvas>
+                <div id="tooltip"></div>
+              </div>
+              <div class="plotfoot">
+                <span id="plotnote">CSV 파일을 불러오세요.</span>
+                <span>SCROLL TO ZOOM · DOUBLE CLICK TO RESET</span>
+              </div>
+            </div>
+            <details class="preview">
+              <summary>
+                데이터 미리보기
+                <span>조건 적용 결과 · 처음 100행</span>
+              </summary>
+              <div id="table"></div>
+            </details>
+          </div>
+        </main>
+        <aside class="right">
+          <div class="panelhead">
+            조건 범위
+            <span>FILTER</span>
+          </div>
+          <p class="help">
+            열별 최소·최대 범위에 포함되는 행만 표시합니다. 여러 조건은 AND로 적용됩니다.
+          </p>
+          <button
+            class="outline"
+            id="addfilter"
+          >
+            ＋ 조건 추가
+          </button>
+          <div id="filters"></div>
+          <button id="clearfilters">모든 조건 지우기</button>
+          <hr />
+          <div class="panelhead">축 범위 직접 지정</div>
+          <div class="bounds">
+            <label>
+              X 최소
+              <input
+                id="xmin"
+                type="number"
+                step="any"
+                placeholder="자동"
+              />
+            </label>
+            <label>
+              X 최대
+              <input
+                id="xmax"
+                type="number"
+                step="any"
+                placeholder="자동"
+              />
+            </label>
+            <label>
+              Y 최소
+              <input
+                id="ymin"
+                type="number"
+                step="any"
+                placeholder="자동"
+              />
+            </label>
+            <label>
+              Y 최대
+              <input
+                id="ymax"
+                type="number"
+                step="any"
+                placeholder="자동"
+              />
+            </label>
+          </div>
+          <button
+            class="solid"
+            id="applybounds"
+          >
+            축 범위 적용
+          </button>
+          <p class="help">
+            빈 칸은 데이터 범위로 맞춥니다. 개별 그래프에서는 Y 범위를 공통으로 적용합니다.
+          </p>
+          <hr />
+          <div class="panelhead">선택 신호 통계</div>
+          <div id="stats"></div>
+        </aside>
+      </div>
+      <footer>
+        <span id="status">준비됨</span>
+        <span>CSVtoGraphViewer</span>
+      </footer>
+    </div>
+    <input
+      hidden
+      type="file"
+      id="file"
+      accept=".csv,.tsv,.txt"
+    />
+    <div
+      id="toast"
+      role="status"
+    ></div>
+    <script src="app.js"></script>
+    <script src="extra.js"></script>
+    <script src="settings.js"></script>
+    <script src="workspace.js"></script>
+    <script src="layout.js"></script>
+    <script src="multifile.js"></script>
+    <script src="preview-filters.js"></script>
+    <script src="preview-link.js"></script>
+    <script src="template-workspace.js"></script>
+    <script src="export-help.js"></script>
+    <script src="export-browser.js"></script>
+    <script src="build-info.js"></script>
+    <script src="panel-layout.js"></script>
+    <script src="axis-help.js"></script>
+    <script src="floating-windows.js"></script>
+  </body>
+</html>

@@ -1,51 +1,703 @@
 // Display preferences are independent of CSV data and graph templates.
-var viewerPrefs={uiSize:13,axisSize:11,iconSize:25,rowHeight:36,lineWidth:1.6,pointSize:2.1,theme:'light',grid:true,compact:false};
-try{Object.assign(viewerPrefs,JSON.parse(localStorage.getItem('CSVtoGraphViewer-settings')||'{}'))}catch{}
-for(const [k,lo,hi] of [['uiSize',8,40],['axisSize',8,40],['lineWidth',.5,8],['pointSize',1,12]]){let n=Number(viewerPrefs[k]);viewerPrefs[k]=Number.isFinite(n)?Math.max(lo,Math.min(hi,n)):({uiSize:13,axisSize:11,iconSize:25,rowHeight:36,lineWidth:1.6,pointSize:2.1})[k]}
-function graphFont(base,family){return (base*viewerPrefs.axisSize/11)+'px '+family}
-'use strict';
+var viewerPrefs = {
+  uiSize: 13,
+  axisSize: 11,
+  iconSize: 25,
+  rowHeight: 36,
+  lineWidth: 1.6,
+  pointSize: 2.1,
+  theme: 'light',
+  grid: true,
+  compact: false,
+};
+try {
+  Object.assign(viewerPrefs, JSON.parse(localStorage.getItem('CSVtoGraphViewer-settings') || '{}'));
+} catch {}
+for (const [k, lo, hi] of [
+  ['uiSize', 8, 40],
+  ['axisSize', 8, 40],
+  ['lineWidth', 0.5, 8],
+  ['pointSize', 1, 12],
+]) {
+  let n = Number(viewerPrefs[k]);
+  viewerPrefs[k] = Number.isFinite(n)
+    ? Math.max(lo, Math.min(hi, n))
+    : { uiSize: 13, axisSize: 11, iconSize: 25, rowHeight: 36, lineWidth: 1.6, pointSize: 2.1 }[k];
+}
+function graphFont(base, family) {
+  return (base * viewerPrefs.axisSize) / 11 + 'px ' + family;
+}
+('use strict');
 // All CSV processing stays in this browser. Empty numeric cells remain missing, never zero.
-const $=id=>document.getElementById(id), palette=['#168579','#5c80c4','#d89943','#b16c9c','#d16d64','#699d59','#7885a9','#4ca7b7'];
-let headers=[],rows=[],filtered=[],selected=new Set(),numeric=[],conditions=[],view=null,manualY=null,pan=false,drag=null,panels=[],lastBuffer=null,lastName='';
-const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const num=s=>s!==undefined&&String(s).trim()!==''&&Number.isFinite(Number(s))?Number(s):NaN;
-function notice(s){$('toast').textContent=s;$('toast').style.display='block';clearTimeout(notice.timer);notice.timer=setTimeout(()=>$('toast').style.display='none',3500)}
+const $ = (id) => document.getElementById(id),
+  palette = [
+    '#168579',
+    '#5c80c4',
+    '#d89943',
+    '#b16c9c',
+    '#d16d64',
+    '#699d59',
+    '#7885a9',
+    '#4ca7b7',
+  ];
+let headers = [],
+  rows = [],
+  filtered = [],
+  selected = new Set(),
+  numeric = [],
+  conditions = [],
+  view = null,
+  manualY = null,
+  pan = false,
+  drag = null,
+  panels = [],
+  lastBuffer = null,
+  lastName = '';
+const esc = (s) =>
+  String(s).replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
+  );
+const num = (s) =>
+  s !== undefined && String(s).trim() !== '' && Number.isFinite(Number(s)) ? Number(s) : NaN;
+function notice(s) {
+  $('toast').textContent = s;
+  $('toast').style.display = 'block';
+  clearTimeout(notice.timer);
+  notice.timer = setTimeout(() => ($('toast').style.display = 'none'), 3500);
+}
 // State-machine parser handles quoted delimiters, escaped quotes, CRLF and embedded newlines.
-function parseCSV(text,delimiter){text=text.replace(/^\uFEFF/,'');if(delimiter==='auto'){let counts={',':0,';':0,'\t':0},q=false;for(let i=0;i<text.length;i++){let c=text[i];if(c==='\"'){if(q&&text[i+1]==='\"')i++;else q=!q}else if(!q&&(c==='\n'||c==='\r'))break;else if(!q&&c in counts)counts[c]++}delimiter=Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0]}if(delimiter==='tab')delimiter='\t';let out=[],row=[],cell='',quoted=false;for(let i=0;i<text.length;i++){let c=text[i];if(c==='"'){if(quoted&&text[i+1]==='"'){cell+='"';i++}else if(quoted||cell==='')quoted=!quoted;else cell+=c}else if(c===delimiter&&!quoted){row.push(cell);cell=''}else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&text[i+1]==='\n')i++;row.push(cell);if(row.some(x=>x.trim()!==''))out.push(row);row=[];cell=''}else cell+=c}if(quoted)throw Error('닫히지 않은 따옴표가 있습니다. CSV 형식을 확인하세요.');row.push(cell);if(row.some(x=>x.trim()!==''))out.push(row);return out}
-function load(text,name){let data=parseCSV(text,$('delimiter').value);if(data.length<2)throw Error('제목 행과 최소 한 개의 데이터 행이 필요합니다.');let head=data.shift(),bad=data.findIndex(r=>r.length!==head.length);if(bad>=0)throw Error(`${bad+2}행의 열 수가 제목 행과 다릅니다.`);let nextHeaders=head.map((h,i)=>h.trim()||`열 ${i+1}`),nextNumeric=nextHeaders.map((_,i)=>data.some(r=>Number.isFinite(num(r[i]))));if(!nextNumeric.some(Boolean))throw Error('숫자로 해석할 수 있는 열이 없습니다.');headers=nextHeaders;rows=data;numeric=nextNumeric;selected=new Set(headers.map((_,i)=>i).filter(i=>numeric[i]).slice(1,4));if(!selected.size)selected.add(numeric.indexOf(true));conditions=[];view=null;manualY=null;$('x').innerHTML='<option value="-1">행 번호</option>'+headers.map((h,i)=>`<option value="${i}">${esc(h)}${numeric[i]?'':' (문자)'}</option>`).join('');$('x').value=String(numeric.indexOf(true));$('filename').textContent=name;$('filelabel').textContent=name;$('filesub').textContent=`${rows.length.toLocaleString()}행 · ${headers.length}열`;$('colcount').textContent=headers.length;$('search').value='';renderColumns();renderFilters();update();notice('CSV 데이터를 불러왔습니다.')}
-function renderColumns(){let q=$('search').value.toLowerCase();$('columns').innerHTML=headers.map((h,i)=>h.toLowerCase().includes(q)?`<label><input type="checkbox" data-col="${i}" ${selected.has(i)?'checked':''} ${numeric[i]?'':'disabled'}><span class="dot" style="background:${palette[i%palette.length]}"></span><span>${esc(h)}</span>${numeric[i]?'':'<small>문자</small>'}</label>`:'').join('');$('selectedCount').textContent=selected.size+'개 선택';$('columns').querySelectorAll('input').forEach(el=>el.onchange=()=>{let i=+el.dataset.col;if(el.checked){if($('selection').value==='single')selected.clear();selected.add(i)}else selected.delete(i);view=null;renderColumns();update()})}
-function renderFilters(){$('filters').innerHTML=conditions.map((f,j)=>`<div class="filter"><select data-f="${j}">${headers.map((h,i)=>numeric[i]?`<option value="${i}" ${f.col===i?'selected':''}>${esc(h)}</option>`:'').join('')}</select><button data-del="${j}" title="조건 삭제">×</button><div class="row"><input type="number" step="any" data-min="${j}" placeholder="최소 (포함)" value="${f.min}"><span>~</span><input type="number" step="any" data-max="${j}" placeholder="최대 (포함)" value="${f.max}"></div></div>`).join('');$('filters').querySelectorAll('[data-del]').forEach(e=>e.onclick=()=>{conditions.splice(+e.dataset.del,1);renderFilters();view=null;update()});$('filters').querySelectorAll('input,select').forEach(e=>e.oninput=()=>{let j=+(e.dataset.f??e.dataset.min??e.dataset.max),f=conditions[j];if(e.dataset.f!==undefined)f.col=+e.value;else f[e.dataset.min!==undefined?'min':'max']=e.value;view=null;update()})}
-function point(r,i){return +$('x').value===-1?r.index+1:num(r.row[+$('x').value])}
-function update(){let invalid=conditions.some(f=>f.min!==''&&f.max!==''&&+f.min>+f.max);filtered=rows.map((row,index)=>({row,index})).filter(r=>conditions.every(f=>{if(f.min===''&&f.max==='')return true;let v=num(r.row[f.col]);return Number.isFinite(v)&&(f.min===''||v>=+f.min)&&(f.max===''||v<=+f.max)}));$('total').textContent=rows.length.toLocaleString();$('filtered').textContent=filtered.length.toLocaleString();$('signals').textContent=selected.size;$('dataSummary').textContent=`${headers.length} 열 / ${filtered.length.toLocaleString()} 행`;$('status').textContent=invalid?'조건 오류: 최소값이 최대값보다 큽니다.':`조건 ${conditions.length}개 · ${rows.length-filtered.length}행 제외`;$('legend').innerHTML=[...selected].map(i=>`<span><i class="dot" style="background:${palette[i%8]}"></i>${esc(headers[i])}</span>`).join('');if(window.renderDataPreview)window.renderDataPreview();else $('table').innerHTML='<table><thead><tr><th>#</th>'+headers.map(h=>`<th>${esc(h)}</th>`).join('')+'</tr></thead><tbody>'+filtered.slice(0,100).map(r=>'<tr><td>'+(r.index+1)+'</td>'+r.row.map(c=>`<td>${esc(c)}</td>`).join('')+'</tr>').join('')+'</tbody></table>';$('stats').innerHTML=[...selected].map(i=>{let n=0,sum=0,min=Infinity,max=-Infinity;for(let r of filtered){let v=num(r.row[i]);if(Number.isFinite(v)){n++;sum+=v;min=Math.min(min,v);max=Math.max(max,v)}}return `<div class="stat"><b style="color:${palette[i%8]}">${esc(headers[i])}</b><div>${n?`최소 ${fmt(min)} · 최대 ${fmt(max)}<br>평균 ${fmt(sum/n)} · 유효 ${n.toLocaleString()}개`:'유효 숫자 없음'}</div></div>`}).join('');draw()}
-function fmt(n){return Number.isFinite(n)?Number(n.toPrecision(6)).toString():'—'}
-function extent(vals){let min=Infinity,max=-Infinity;for(let v of vals)if(Number.isFinite(v)){min=Math.min(min,v);max=Math.max(max,v)}if(!Number.isFinite(min))return [0,1];if(min===max){let d=Math.abs(min)*.05||1;return[min-d,max+d]}return[min,max]}
-function dataX(){return extent(filtered.map(point))}
-function seriesRows(col){return filtered}
-function draw(){let split=$('layout').value==='split',ids=[...selected],count=split?Math.max(1,ids.length):1;$('plotwrap').style.height=Math.max(390,count*240)+'px';let canvas=$('plot'),w=canvas.clientWidth,h=canvas.clientHeight,dpr=devicePixelRatio||1;canvas.width=w*dpr;canvas.height=h*dpr;let ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);let css=getComputedStyle(document.body),bg=css.getPropertyValue('--bg').trim(),text=css.getPropertyValue('--muted').trim(),line=css.getPropertyValue('--line').trim();ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);panels=[];let xr=view||dataX();$('extent').textContent=fmt(xr[0])+' → '+fmt(xr[1]);if(!rows.length||!ids.length||!filtered.length){ctx.fillStyle=text;ctx.textAlign='center';ctx.font=graphFont(13,'Segoe UI');ctx.fillText(!rows.length?'CSV 파일을 불러오세요.':!ids.length?'왼쪽에서 Y축 신호를 선택하세요.':'조건에 맞는 데이터가 없습니다.',w/2,h/2);return}let points=0;
-for(let k=0;k<count;k++){let series=split?[ids[k]]:ids,top=k*h/count+28,bottom=(k+1)*h/count-45,left=72,right=w-24;let values=[];for(let r of filtered){let x=point(r);if(x>=xr[0]&&x<=xr[1])for(let i of series)values.push(num(r.row[i]))}let yr=manualY||extent(values);if(!manualY){let pad=(yr[1]-yr[0])*.06;yr=[yr[0]-pad,yr[1]+pad]}let p={left,right,top,bottom,xr,yr,series};panels.push(p);let X=x=>left+(x-xr[0])/(xr[1]-xr[0])*(right-left),Y=y=>bottom-(y-yr[0])/(yr[1]-yr[0])*(bottom-top);ctx.font=graphFont(10,'Consolas, monospace');ctx.lineWidth=1;
-for(let t=0;t<=5;t++){let x=left+(right-left)*t/5,y=top+(bottom-top)*t/5;ctx.strokeStyle=viewerPrefs.grid?line:"transparent";ctx.beginPath();ctx.moveTo(x,top);ctx.lineTo(x,bottom);ctx.moveTo(left,y);ctx.lineTo(right,y);ctx.stroke();ctx.fillStyle=text;ctx.textAlign='center';ctx.fillText(fmt(xr[0]+(xr[1]-xr[0])*t/5),x,bottom+18);ctx.textAlign='right';ctx.fillText(fmt(yr[1]-(yr[1]-yr[0])*t/5),left-9,y+3)}ctx.fillStyle=text;ctx.textAlign='left';ctx.fillText(split?headers[series[0]]:'Amplitude',left,top-12);ctx.textAlign='center';ctx.fillText(+$('x').value===-1?'행 번호':headers[+$('x').value],(left+right)/2,bottom+35);
-ctx.save();ctx.beginPath();ctx.rect(left,top,right-left,bottom-top);ctx.clip();for(let col of series){ctx.strokeStyle=palette[col%8];ctx.fillStyle=palette[col%8];ctx.lineWidth=viewerPrefs.lineWidth;ctx.beginPath();let started=false;for(let r of seriesRows(col)){let x=point(r),v=num(r.row[col]);if(!Number.isFinite(x)||!Number.isFinite(v)){started=false;continue}let px=X(x),py=Y(v);if($('style').value!=='scatter'){if(!started)ctx.moveTo(px,py);else ctx.lineTo(px,py);started=true}points++;}if($('style').value!=='scatter')ctx.stroke();if($('style').value!=='line'){for(let r of seriesRows(col)){let x=point(r),v=num(r.row[col]);if(Number.isFinite(x)&&Number.isFinite(v)&&x>=xr[0]&&x<=xr[1]){ctx.beginPath();ctx.arc(X(x),Y(v),viewerPrefs.pointSize,0,Math.PI*2);ctx.fill()}}}}ctx.restore();}
-$('plotnote').textContent=`${filtered.length.toLocaleString()}행 · 누락 값은 선을 끊어서 표시 · ${pan?'이동':'영역 확대'} 모드`;if(drag&&!drag.panning){ctx.fillStyle='#16857920';ctx.strokeStyle='#168579';ctx.fillRect(Math.min(drag.x,drag.end),Math.min(drag.y,drag.endY),Math.abs(drag.end-drag.x),Math.abs(drag.endY-drag.y));ctx.strokeRect(Math.min(drag.x,drag.end),Math.min(drag.y,drag.endY),Math.abs(drag.end-drag.x),Math.abs(drag.endY-drag.y))}}
-function coords(e){let b=$('plot').getBoundingClientRect();return{x:e.clientX-b.left,y:e.clientY-b.top}}function panelAt(c){return panels.find(p=>c.x>=p.left&&c.x<=p.right&&c.y>=p.top&&c.y<=p.bottom)}function world(x,p){return p.xr[0]+(x-p.left)/(p.right-p.left)*(p.xr[1]-p.xr[0])}
-$('plot').addEventListener('wheel',e=>{let c=coords(e),p=panelAt(c);if(!p)return;e.preventDefault();let center=world(c.x,p),factor=e.deltaY>0?1.2:1/1.2;let a=center+(p.xr[0]-center)*factor,b=center+(p.xr[1]-center)*factor;if(Number.isFinite(a)&&Number.isFinite(b)&&b>a){view=[a,b];let cy=p.yr[1]-(c.y-p.top)/(p.bottom-p.top)*(p.yr[1]-p.yr[0]);manualY=p.yr.map(v=>cy+(v-cy)*factor);draw()}},{passive:false});
+function parseCSV(text, delimiter) {
+  text = text.replace(/^\uFEFF/, '');
+  if (delimiter === 'auto') {
+    let counts = { ',': 0, ';': 0, '\t': 0 },
+      q = false;
+    for (let i = 0; i < text.length; i++) {
+      let c = text[i];
+      if (c === '\"') {
+        if (q && text[i + 1] === '\"') i++;
+        else q = !q;
+      } else if (!q && (c === '\n' || c === '\r')) break;
+      else if (!q && c in counts) counts[c]++;
+    }
+    delimiter = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+  }
+  if (delimiter === 'tab') delimiter = '\t';
+  let out = [],
+    row = [],
+    cell = '',
+    quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    let c = text[i];
+    if (c === '"') {
+      if (quoted && text[i + 1] === '"') {
+        cell += '"';
+        i++;
+      } else if (quoted || cell === '') quoted = !quoted;
+      else cell += c;
+    } else if (c === delimiter && !quoted) {
+      row.push(cell);
+      cell = '';
+    } else if ((c === '\n' || c === '\r') && !quoted) {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(cell);
+      if (row.some((x) => x.trim() !== '')) out.push(row);
+      row = [];
+      cell = '';
+    } else cell += c;
+  }
+  if (quoted) throw Error('닫히지 않은 따옴표가 있습니다. CSV 형식을 확인하세요.');
+  row.push(cell);
+  if (row.some((x) => x.trim() !== '')) out.push(row);
+  return out;
+}
+function load(text, name) {
+  let data = parseCSV(text, $('delimiter').value);
+  if (data.length < 2) throw Error('제목 행과 최소 한 개의 데이터 행이 필요합니다.');
+  let head = data.shift(),
+    bad = data.findIndex((r) => r.length !== head.length);
+  if (bad >= 0) throw Error(`${bad + 2}행의 열 수가 제목 행과 다릅니다.`);
+  let nextHeaders = head.map((h, i) => h.trim() || `열 ${i + 1}`),
+    nextNumeric = nextHeaders.map((_, i) => data.some((r) => Number.isFinite(num(r[i]))));
+  if (!nextNumeric.some(Boolean)) throw Error('숫자로 해석할 수 있는 열이 없습니다.');
+  headers = nextHeaders;
+  rows = data;
+  numeric = nextNumeric;
+  selected = new Set(
+    headers
+      .map((_, i) => i)
+      .filter((i) => numeric[i])
+      .slice(1, 4),
+  );
+  if (!selected.size) selected.add(numeric.indexOf(true));
+  conditions = [];
+  view = null;
+  manualY = null;
+  $('x').innerHTML =
+    '<option value="-1">행 번호</option>' +
+    headers
+      .map((h, i) => `<option value="${i}">${esc(h)}${numeric[i] ? '' : ' (문자)'}</option>`)
+      .join('');
+  $('x').value = String(numeric.indexOf(true));
+  $('filename').textContent = name;
+  $('filelabel').textContent = name;
+  $('filesub').textContent = `${rows.length.toLocaleString()}행 · ${headers.length}열`;
+  $('colcount').textContent = headers.length;
+  $('search').value = '';
+  renderColumns();
+  renderFilters();
+  update();
+  notice('CSV 데이터를 불러왔습니다.');
+}
+function renderColumns() {
+  let q = $('search').value.toLowerCase();
+  $('columns').innerHTML = headers
+    .map((h, i) =>
+      h.toLowerCase().includes(q)
+        ? `<label><input type="checkbox" data-col="${i}" ${selected.has(i) ? 'checked' : ''} ${numeric[i] ? '' : 'disabled'}><span class="dot" style="background:${palette[i % palette.length]}"></span><span>${esc(h)}</span>${numeric[i] ? '' : '<small>문자</small>'}</label>`
+        : '',
+    )
+    .join('');
+  $('selectedCount').textContent = selected.size + '개 선택';
+  $('columns')
+    .querySelectorAll('input')
+    .forEach(
+      (el) =>
+        (el.onchange = () => {
+          let i = +el.dataset.col;
+          if (el.checked) {
+            if ($('selection').value === 'single') selected.clear();
+            selected.add(i);
+          } else selected.delete(i);
+          view = null;
+          renderColumns();
+          update();
+        }),
+    );
+}
+function renderFilters() {
+  $('filters').innerHTML = conditions
+    .map(
+      (f, j) =>
+        `<div class="filter"><select data-f="${j}">${headers.map((h, i) => (numeric[i] ? `<option value="${i}" ${f.col === i ? 'selected' : ''}>${esc(h)}</option>` : '')).join('')}</select><button data-del="${j}" title="조건 삭제">×</button><div class="row"><input type="number" step="any" data-min="${j}" placeholder="최소 (포함)" value="${f.min}"><span>~</span><input type="number" step="any" data-max="${j}" placeholder="최대 (포함)" value="${f.max}"></div></div>`,
+    )
+    .join('');
+  $('filters')
+    .querySelectorAll('[data-del]')
+    .forEach(
+      (e) =>
+        (e.onclick = () => {
+          conditions.splice(+e.dataset.del, 1);
+          renderFilters();
+          view = null;
+          update();
+        }),
+    );
+  $('filters')
+    .querySelectorAll('input,select')
+    .forEach(
+      (e) =>
+        (e.oninput = () => {
+          let j = +(e.dataset.f ?? e.dataset.min ?? e.dataset.max),
+            f = conditions[j];
+          if (e.dataset.f !== undefined) f.col = +e.value;
+          else f[e.dataset.min !== undefined ? 'min' : 'max'] = e.value;
+          view = null;
+          update();
+        }),
+    );
+}
+function point(r, i) {
+  return +$('x').value === -1 ? r.index + 1 : num(r.row[+$('x').value]);
+}
+function update() {
+  let invalid = conditions.some((f) => f.min !== '' && f.max !== '' && +f.min > +f.max);
+  filtered = rows
+    .map((row, index) => ({ row, index }))
+    .filter((r) =>
+      conditions.every((f) => {
+        if (f.min === '' && f.max === '') return true;
+        let v = num(r.row[f.col]);
+        return Number.isFinite(v) && (f.min === '' || v >= +f.min) && (f.max === '' || v <= +f.max);
+      }),
+    );
+  $('total').textContent = rows.length.toLocaleString();
+  $('filtered').textContent = filtered.length.toLocaleString();
+  $('signals').textContent = selected.size;
+  $('dataSummary').textContent = `${headers.length} 열 / ${filtered.length.toLocaleString()} 행`;
+  $('status').textContent = invalid
+    ? '조건 오류: 최소값이 최대값보다 큽니다.'
+    : `조건 ${conditions.length}개 · ${rows.length - filtered.length}행 제외`;
+  $('legend').innerHTML = [...selected]
+    .map(
+      (i) =>
+        `<span><i class="dot" style="background:${palette[i % 8]}"></i>${esc(headers[i])}</span>`,
+    )
+    .join('');
+  if (window.renderDataPreview) window.renderDataPreview();
+  else
+    $('table').innerHTML =
+      '<table><thead><tr><th>#</th>' +
+      headers.map((h) => `<th>${esc(h)}</th>`).join('') +
+      '</tr></thead><tbody>' +
+      filtered
+        .slice(0, 100)
+        .map(
+          (r) =>
+            '<tr><td>' +
+            (r.index + 1) +
+            '</td>' +
+            r.row.map((c) => `<td>${esc(c)}</td>`).join('') +
+            '</tr>',
+        )
+        .join('') +
+      '</tbody></table>';
+  $('stats').innerHTML = [...selected]
+    .map((i) => {
+      let n = 0,
+        sum = 0,
+        min = Infinity,
+        max = -Infinity;
+      for (let r of filtered) {
+        let v = num(r.row[i]);
+        if (Number.isFinite(v)) {
+          n++;
+          sum += v;
+          min = Math.min(min, v);
+          max = Math.max(max, v);
+        }
+      }
+      return `<div class="stat"><b style="color:${palette[i % 8]}">${esc(headers[i])}</b><div>${n ? `최소 ${fmt(min)} · 최대 ${fmt(max)}<br>평균 ${fmt(sum / n)} · 유효 ${n.toLocaleString()}개` : '유효 숫자 없음'}</div></div>`;
+    })
+    .join('');
+  draw();
+}
+function fmt(n) {
+  return Number.isFinite(n) ? Number(n.toPrecision(6)).toString() : '—';
+}
+function extent(vals) {
+  let min = Infinity,
+    max = -Infinity;
+  for (let v of vals)
+    if (Number.isFinite(v)) {
+      min = Math.min(min, v);
+      max = Math.max(max, v);
+    }
+  if (!Number.isFinite(min)) return [0, 1];
+  if (min === max) {
+    let d = Math.abs(min) * 0.05 || 1;
+    return [min - d, max + d];
+  }
+  return [min, max];
+}
+function dataX() {
+  return extent(filtered.map(point));
+}
+function seriesRows(col) {
+  return filtered;
+}
+function draw() {
+  let split = $('layout').value === 'split',
+    ids = [...selected],
+    count = split ? Math.max(1, ids.length) : 1;
+  $('plotwrap').style.height = Math.max(390, count * 240) + 'px';
+  let canvas = $('plot'),
+    w = canvas.clientWidth,
+    h = canvas.clientHeight,
+    dpr = devicePixelRatio || 1;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  let ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  let css = getComputedStyle(document.body),
+    bg = css.getPropertyValue('--bg').trim(),
+    text = css.getPropertyValue('--muted').trim(),
+    line = css.getPropertyValue('--line').trim();
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, w, h);
+  panels = [];
+  let xr = view || dataX();
+  $('extent').textContent = fmt(xr[0]) + ' → ' + fmt(xr[1]);
+  if (!rows.length || !ids.length || !filtered.length) {
+    ctx.fillStyle = text;
+    ctx.textAlign = 'center';
+    ctx.font = graphFont(13, 'Segoe UI');
+    ctx.fillText(
+      !rows.length
+        ? 'CSV 파일을 불러오세요.'
+        : !ids.length
+          ? '왼쪽에서 Y축 신호를 선택하세요.'
+          : '조건에 맞는 데이터가 없습니다.',
+      w / 2,
+      h / 2,
+    );
+    return;
+  }
+  let points = 0;
+  for (let k = 0; k < count; k++) {
+    let series = split ? [ids[k]] : ids,
+      top = (k * h) / count + 28,
+      bottom = ((k + 1) * h) / count - 45,
+      left = 72,
+      right = w - 24;
+    let values = [];
+    for (let r of filtered) {
+      let x = point(r);
+      if (x >= xr[0] && x <= xr[1]) for (let i of series) values.push(num(r.row[i]));
+    }
+    let yr = manualY || extent(values);
+    if (!manualY) {
+      let pad = (yr[1] - yr[0]) * 0.06;
+      yr = [yr[0] - pad, yr[1] + pad];
+    }
+    let p = { left, right, top, bottom, xr, yr, series };
+    panels.push(p);
+    let X = (x) => left + ((x - xr[0]) / (xr[1] - xr[0])) * (right - left),
+      Y = (y) => bottom - ((y - yr[0]) / (yr[1] - yr[0])) * (bottom - top);
+    ctx.font = graphFont(10, 'Consolas, monospace');
+    ctx.lineWidth = 1;
+    for (let t = 0; t <= 5; t++) {
+      let x = left + ((right - left) * t) / 5,
+        y = top + ((bottom - top) * t) / 5;
+      ctx.strokeStyle = viewerPrefs.grid ? line : 'transparent';
+      ctx.beginPath();
+      ctx.moveTo(x, top);
+      ctx.lineTo(x, bottom);
+      ctx.moveTo(left, y);
+      ctx.lineTo(right, y);
+      ctx.stroke();
+      ctx.fillStyle = text;
+      ctx.textAlign = 'center';
+      ctx.fillText(fmt(xr[0] + ((xr[1] - xr[0]) * t) / 5), x, bottom + 18);
+      ctx.textAlign = 'right';
+      ctx.fillText(fmt(yr[1] - ((yr[1] - yr[0]) * t) / 5), left - 9, y + 3);
+    }
+    ctx.fillStyle = text;
+    ctx.textAlign = 'left';
+    ctx.fillText(split ? headers[series[0]] : 'Amplitude', left, top - 12);
+    ctx.textAlign = 'center';
+    ctx.fillText(
+      +$('x').value === -1 ? '행 번호' : headers[+$('x').value],
+      (left + right) / 2,
+      bottom + 35,
+    );
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(left, top, right - left, bottom - top);
+    ctx.clip();
+    for (let col of series) {
+      ctx.strokeStyle = palette[col % 8];
+      ctx.fillStyle = palette[col % 8];
+      ctx.lineWidth = viewerPrefs.lineWidth;
+      ctx.beginPath();
+      let started = false;
+      for (let r of seriesRows(col)) {
+        let x = point(r),
+          v = num(r.row[col]);
+        if (!Number.isFinite(x) || !Number.isFinite(v)) {
+          started = false;
+          continue;
+        }
+        let px = X(x),
+          py = Y(v);
+        if ($('style').value !== 'scatter') {
+          if (!started) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+          started = true;
+        }
+        points++;
+      }
+      if ($('style').value !== 'scatter') ctx.stroke();
+      if ($('style').value !== 'line') {
+        for (let r of seriesRows(col)) {
+          let x = point(r),
+            v = num(r.row[col]);
+          if (Number.isFinite(x) && Number.isFinite(v) && x >= xr[0] && x <= xr[1]) {
+            ctx.beginPath();
+            ctx.arc(X(x), Y(v), viewerPrefs.pointSize, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+    }
+    ctx.restore();
+  }
+  $('plotnote').textContent =
+    `${filtered.length.toLocaleString()}행 · 누락 값은 선을 끊어서 표시 · ${pan ? '이동' : '영역 확대'} 모드`;
+  if (drag && !drag.panning) {
+    ctx.fillStyle = '#16857920';
+    ctx.strokeStyle = '#168579';
+    ctx.fillRect(
+      Math.min(drag.x, drag.end),
+      Math.min(drag.y, drag.endY),
+      Math.abs(drag.end - drag.x),
+      Math.abs(drag.endY - drag.y),
+    );
+    ctx.strokeRect(
+      Math.min(drag.x, drag.end),
+      Math.min(drag.y, drag.endY),
+      Math.abs(drag.end - drag.x),
+      Math.abs(drag.endY - drag.y),
+    );
+  }
+}
+function coords(e) {
+  let b = $('plot').getBoundingClientRect();
+  return { x: e.clientX - b.left, y: e.clientY - b.top };
+}
+function panelAt(c) {
+  return panels.find((p) => c.x >= p.left && c.x <= p.right && c.y >= p.top && c.y <= p.bottom);
+}
+function world(x, p) {
+  return p.xr[0] + ((x - p.left) / (p.right - p.left)) * (p.xr[1] - p.xr[0]);
+}
+$('plot').addEventListener(
+  'wheel',
+  (e) => {
+    let c = coords(e),
+      p = panelAt(c);
+    if (!p) return;
+    e.preventDefault();
+    let center = world(c.x, p),
+      factor = e.deltaY > 0 ? 1.2 : 1 / 1.2;
+    let a = center + (p.xr[0] - center) * factor,
+      b = center + (p.xr[1] - center) * factor;
+    if (Number.isFinite(a) && Number.isFinite(b) && b > a) {
+      view = [a, b];
+      let cy = p.yr[1] - ((c.y - p.top) / (p.bottom - p.top)) * (p.yr[1] - p.yr[0]);
+      manualY = p.yr.map((v) => cy + (v - cy) * factor);
+      draw();
+    }
+  },
+  { passive: false },
+);
 // Middle-button drag temporarily pans without changing the selected left-button tool.
-$('plot').onpointerdown=e=>{if(e.button!==0&&e.button!==1)return;let c=coords(e),p=panelAt(c);if(!p)return;e.preventDefault();drag={pointerId:e.pointerId,panning:pan||e.button===1,x:c.x,y:c.y,end:c.x,endY:c.y,p,original:[...p.xr],originalY:[...p.yr]};$('plot').setPointerCapture(e.pointerId);$('plot').style.cursor=drag.panning?'grabbing':'crosshair';$('tooltip').style.display='none'};
-$('plot').onpointermove=e=>{let c=coords(e);if(drag){drag.end=Math.max(drag.p.left,Math.min(drag.p.right,c.x));drag.endY=Math.max(drag.p.top,Math.min(drag.p.bottom,c.y));if(drag.panning){let d=(drag.x-c.x)/(drag.p.right-drag.p.left)*(drag.original[1]-drag.original[0]);view=drag.original.map(v=>v+d);let dy=(c.y-drag.y)/(drag.p.bottom-drag.p.top)*(drag.originalY[1]-drag.originalY[0]);manualY=drag.originalY.map(v=>v+dy)}draw();return}let p=panelAt(c);if(!p){$('tooltip').style.display='none';return}let x=world(c.x,p),nearest=null,d=Infinity;for(let r of filtered){let delta=Math.abs(point(r)-x);if(delta<d){d=delta;nearest=r}}if(nearest){$('tooltip').textContent=`행 ${nearest.index+1} · X ${fmt(point(nearest))}\n`+p.series.map(i=>headers[i]+': '+fmt(num(nearest.row[i]))).join('\n');$('tooltip').style.display='block';$('tooltip').style.left=Math.max(0,Math.min(c.x+14,$('plot').clientWidth-230))+'px';$('tooltip').style.top=Math.max(0,c.y-65)+'px'}};
-function endDrag(){if(!drag)return;if(!drag.panning&&Math.abs(drag.end-drag.x)>5){view=[world(Math.min(drag.x,drag.end),drag.p),world(Math.max(drag.x,drag.end),drag.p)];if(Math.abs(drag.endY-drag.y)>5){let toY=y=>drag.p.yr[1]-(y-drag.p.top)/(drag.p.bottom-drag.p.top)*(drag.p.yr[1]-drag.p.yr[0]);manualY=[toY(Math.max(drag.y,drag.endY)),toY(Math.min(drag.y,drag.endY))]}}drag=null;$('plot').style.cursor=pan?'grab':'crosshair';draw()}
-$('plot').onpointerup=endDrag;$('plot').onpointercancel=()=>{drag=null;$('plot').style.cursor=pan?'grab':'crosshair';draw()};$('plot').onlostpointercapture=()=>{if(drag){drag=null;$('plot').style.cursor=pan?'grab':'crosshair';draw()}};
+$('plot').onpointerdown = (e) => {
+  if (e.button !== 0 && e.button !== 1) return;
+  let c = coords(e),
+    p = panelAt(c);
+  if (!p) return;
+  e.preventDefault();
+  drag = {
+    pointerId: e.pointerId,
+    panning: pan || e.button === 1,
+    x: c.x,
+    y: c.y,
+    end: c.x,
+    endY: c.y,
+    p,
+    original: [...p.xr],
+    originalY: [...p.yr],
+  };
+  $('plot').setPointerCapture(e.pointerId);
+  $('plot').style.cursor = drag.panning ? 'grabbing' : 'crosshair';
+  $('tooltip').style.display = 'none';
+};
+$('plot').onpointermove = (e) => {
+  let c = coords(e);
+  if (drag) {
+    drag.end = Math.max(drag.p.left, Math.min(drag.p.right, c.x));
+    drag.endY = Math.max(drag.p.top, Math.min(drag.p.bottom, c.y));
+    if (drag.panning) {
+      let d =
+        ((drag.x - c.x) / (drag.p.right - drag.p.left)) * (drag.original[1] - drag.original[0]);
+      view = drag.original.map((v) => v + d);
+      let dy =
+        ((c.y - drag.y) / (drag.p.bottom - drag.p.top)) * (drag.originalY[1] - drag.originalY[0]);
+      manualY = drag.originalY.map((v) => v + dy);
+    }
+    draw();
+    return;
+  }
+  let p = panelAt(c);
+  if (!p) {
+    $('tooltip').style.display = 'none';
+    return;
+  }
+  let x = world(c.x, p),
+    nearest = null,
+    d = Infinity;
+  for (let r of filtered) {
+    let delta = Math.abs(point(r) - x);
+    if (delta < d) {
+      d = delta;
+      nearest = r;
+    }
+  }
+  if (nearest) {
+    $('tooltip').textContent =
+      `행 ${nearest.index + 1} · X ${fmt(point(nearest))}\n` +
+      p.series.map((i) => headers[i] + ': ' + fmt(num(nearest.row[i]))).join('\n');
+    $('tooltip').style.display = 'block';
+    $('tooltip').style.left = Math.max(0, Math.min(c.x + 14, $('plot').clientWidth - 230)) + 'px';
+    $('tooltip').style.top = Math.max(0, c.y - 65) + 'px';
+  }
+};
+function endDrag() {
+  if (!drag) return;
+  if (!drag.panning && Math.abs(drag.end - drag.x) > 5) {
+    view = [world(Math.min(drag.x, drag.end), drag.p), world(Math.max(drag.x, drag.end), drag.p)];
+    if (Math.abs(drag.endY - drag.y) > 5) {
+      let toY = (y) =>
+        drag.p.yr[1] -
+        ((y - drag.p.top) / (drag.p.bottom - drag.p.top)) * (drag.p.yr[1] - drag.p.yr[0]);
+      manualY = [toY(Math.max(drag.y, drag.endY)), toY(Math.min(drag.y, drag.endY))];
+    }
+  }
+  drag = null;
+  $('plot').style.cursor = pan ? 'grab' : 'crosshair';
+  draw();
+}
+$('plot').onpointerup = endDrag;
+$('plot').onpointercancel = () => {
+  drag = null;
+  $('plot').style.cursor = pan ? 'grab' : 'crosshair';
+  draw();
+};
+$('plot').onlostpointercapture = () => {
+  if (drag) {
+    drag = null;
+    $('plot').style.cursor = pan ? 'grab' : 'crosshair';
+    draw();
+  }
+};
 // Prevent browser autoscroll from stealing a middle-button gesture on the graph.
-$('plot').addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault()});
-$('plot').addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault()});$('plot').onpointerleave=()=>{$('tooltip').style.display='none'};
-function reset(){view=null;manualY=null;for(let id of ['xmin','xmax','ymin','ymax'])$(id).value='';draw()}
-$('plot').ondblclick=reset;$('reset').onclick=reset;$('open').onclick=()=>$('file').click();
-async function readBuffer(){try{load(new TextDecoder($('encoding').value).decode(lastBuffer),lastName)}catch(e){notice(e.message)}}
-$('file').onchange=async e=>{let f=e.target.files[0];if(!f)return;lastName=f.name;lastBuffer=await f.arrayBuffer();await readBuffer();e.target.value=''};for(let id of ['encoding','delimiter'])$(id).onchange=()=>{if(lastBuffer)readBuffer()};
-$('search').oninput=renderColumns;$('selection').onchange=()=>{if($('selection').value==='single'&&selected.size>1)selected=new Set([[...selected][0]]);renderColumns();update()};$('all').onclick=()=>{selected=new Set(headers.map((_,i)=>i).filter(i=>numeric[i]).slice(0,$('selection').value==='single'?1:undefined));renderColumns();update()};$('none').onclick=()=>{selected.clear();renderColumns();update()};$('x').onchange=()=>{view=null;update()};for(let id of ['layout','style'])$(id).onchange=draw;
-$('addfilter').onclick=()=>{if(!headers.length)return notice('CSV 파일을 먼저 불러오세요.');conditions.push({col:numeric.indexOf(true),min:'',max:''});renderFilters();update()};$('clearfilters').onclick=()=>{conditions=[];view=null;renderFilters();update()};
-$('applybounds').onclick=()=>{let x=dataX(),a=$('xmin').value===''?x[0]:+$('xmin').value,b=$('xmax').value===''?x[1]:+$('xmax').value;let vals=[];for(let r of filtered)for(let i of selected)vals.push(num(r.row[i]));let y=extent(vals),c=$('ymin').value===''?y[0]:+$('ymin').value,d=$('ymax').value===''?y[1]:+$('ymax').value;if(![a,b,c,d].every(Number.isFinite)||a>=b||c>=d)return notice('축 최소값은 최대값보다 작아야 합니다.');view=[a,b];manualY=$('ymin').value===''&&$('ymax').value===''?null:[c,d];draw()};
-function download(blob,name){let url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),10000)}
-function serializeCSV(header,data){let quote=s=>'\"'+String(s).replace(/\"/g,'\"\"')+'\"';return '\uFEFF'+[header,...data].map(r=>r.map(quote).join(',')).join('\r\n')}
-$('theme').onclick=()=>{document.body.classList.toggle('dark');try{localStorage.setItem('scope-dark',document.body.classList.contains('dark'))}catch{};draw()};try{if(localStorage.getItem('scope-dark')==='true')document.body.classList.add('dark')}catch{};
-for(let [id,value] of [['zoom',false],['pan',true]])$(id).onclick=()=>{pan=value;$('zoom').classList.toggle('on',!pan);$('pan').classList.toggle('on',pan);$('plot').style.cursor=pan?'grab':'crosshair';draw()};
-$('resize').onpointerdown=e=>{let start=e.clientX,width=$('left').offsetWidth;$('resize').setPointerCapture(e.pointerId);$('resize').onpointermove=ev=>{$('left').style.width=Math.max(180,Math.min(430,width+ev.clientX-start))+'px';draw()};$('resize').onpointerup=()=>{$('resize').onpointermove=null}};
-new ResizeObserver(()=>draw()).observe($('plotwrap'));$('x').innerHTML='<option value="-1">행 번호</option>';draw();
+$('plot').addEventListener('mousedown', (e) => {
+  if (e.button === 1) e.preventDefault();
+});
+$('plot').addEventListener('auxclick', (e) => {
+  if (e.button === 1) e.preventDefault();
+});
+$('plot').onpointerleave = () => {
+  $('tooltip').style.display = 'none';
+};
+function reset() {
+  view = null;
+  manualY = null;
+  for (let id of ['xmin', 'xmax', 'ymin', 'ymax']) $(id).value = '';
+  draw();
+}
+$('plot').ondblclick = reset;
+$('reset').onclick = reset;
+$('open').onclick = () => $('file').click();
+async function readBuffer() {
+  try {
+    load(new TextDecoder($('encoding').value).decode(lastBuffer), lastName);
+  } catch (e) {
+    notice(e.message);
+  }
+}
+$('file').onchange = async (e) => {
+  let f = e.target.files[0];
+  if (!f) return;
+  lastName = f.name;
+  lastBuffer = await f.arrayBuffer();
+  await readBuffer();
+  e.target.value = '';
+};
+for (let id of ['encoding', 'delimiter'])
+  $(id).onchange = () => {
+    if (lastBuffer) readBuffer();
+  };
+$('search').oninput = renderColumns;
+$('selection').onchange = () => {
+  if ($('selection').value === 'single' && selected.size > 1)
+    selected = new Set([[...selected][0]]);
+  renderColumns();
+  update();
+};
+$('all').onclick = () => {
+  selected = new Set(
+    headers
+      .map((_, i) => i)
+      .filter((i) => numeric[i])
+      .slice(0, $('selection').value === 'single' ? 1 : undefined),
+  );
+  renderColumns();
+  update();
+};
+$('none').onclick = () => {
+  selected.clear();
+  renderColumns();
+  update();
+};
+$('x').onchange = () => {
+  view = null;
+  update();
+};
+for (let id of ['layout', 'style']) $(id).onchange = draw;
+$('addfilter').onclick = () => {
+  if (!headers.length) return notice('CSV 파일을 먼저 불러오세요.');
+  conditions.push({ col: numeric.indexOf(true), min: '', max: '' });
+  renderFilters();
+  update();
+};
+$('clearfilters').onclick = () => {
+  conditions = [];
+  view = null;
+  renderFilters();
+  update();
+};
+$('applybounds').onclick = () => {
+  let x = dataX(),
+    a = $('xmin').value === '' ? x[0] : +$('xmin').value,
+    b = $('xmax').value === '' ? x[1] : +$('xmax').value;
+  let vals = [];
+  for (let r of filtered) for (let i of selected) vals.push(num(r.row[i]));
+  let y = extent(vals),
+    c = $('ymin').value === '' ? y[0] : +$('ymin').value,
+    d = $('ymax').value === '' ? y[1] : +$('ymax').value;
+  if (![a, b, c, d].every(Number.isFinite) || a >= b || c >= d)
+    return notice('축 최소값은 최대값보다 작아야 합니다.');
+  view = [a, b];
+  manualY = $('ymin').value === '' && $('ymax').value === '' ? null : [c, d];
+  draw();
+};
+function download(blob, name) {
+  let url = URL.createObjectURL(blob),
+    a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+function serializeCSV(header, data) {
+  let quote = (s) => '\"' + String(s).replace(/\"/g, '\"\"') + '\"';
+  return '\uFEFF' + [header, ...data].map((r) => r.map(quote).join(',')).join('\r\n');
+}
+$('theme').onclick = () => {
+  document.body.classList.toggle('dark');
+  try {
+    localStorage.setItem('scope-dark', document.body.classList.contains('dark'));
+  } catch {}
+  draw();
+};
+try {
+  if (localStorage.getItem('scope-dark') === 'true') document.body.classList.add('dark');
+} catch {}
+for (let [id, value] of [
+  ['zoom', false],
+  ['pan', true],
+])
+  $(id).onclick = () => {
+    pan = value;
+    $('zoom').classList.toggle('on', !pan);
+    $('pan').classList.toggle('on', pan);
+    $('plot').style.cursor = pan ? 'grab' : 'crosshair';
+    draw();
+  };
+$('resize').onpointerdown = (e) => {
+  let start = e.clientX,
+    width = $('left').offsetWidth;
+  $('resize').setPointerCapture(e.pointerId);
+  $('resize').onpointermove = (ev) => {
+    $('left').style.width = Math.max(180, Math.min(430, width + ev.clientX - start)) + 'px';
+    draw();
+  };
+  $('resize').onpointerup = () => {
+    $('resize').onpointermove = null;
+  };
+};
+new ResizeObserver(() => draw()).observe($('plotwrap'));
+$('x').innerHTML = '<option value="-1">행 번호</option>';
+draw();

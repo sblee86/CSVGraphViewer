@@ -16,7 +16,7 @@ with sync_playwright() as p:
   page.goto(f'http://127.0.0.1:{server.server_port}/{entry}')
   page.evaluate("""()=>{workspaceDialog.close();load('T,Y\\n'+Array.from({length:200},(_,i)=>i+','+(i+1)).join('\\n'),'records.csv');window.settingsText='';workRoot={getFileHandle:async()=>({createWritable:async()=>({write:async text=>settingsText=text,close:async()=>{}}),getFile:async()=>({text:async()=>settingsText})})}}""")
   assert page.locator('.buildLabel').inner_text().startswith('v1.')
-  assert '브라우저 로컬 분석' not in page.locator('header').inner_text()
+  assert '브라우저 로컬 분석' not in page.locator('.app > header').inner_text()
   assert page.evaluate('graphDisclosure.open')
   page.locator('#graphDisclosure>summary').click()
   page.wait_for_function('viewerPrefs.graphCollapsed')

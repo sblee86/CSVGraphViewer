@@ -9,3 +9,5 @@ Commit build.json, source/build-info.js, and CSVtoGraphViewer.html with the corr
 Use relevant browser smoke scripts under tests/ to verify behavior. They require Python playwright and /usr/bin/chromium and create their own HTTP servers and temporary in-memory CSV data. `python tests/build_stamp_smoke.py` checks version behavior in an isolated temporary copy.
 
 Panel layout preferences are workspace settings, not graph-template fields. Keep original CSV and user workspace files intact except for explicitly requested user actions.
+
+Keep source code readable with indentation, line breaks, and separated logical blocks. Follow .prettierrc.json (Prettier 3.6.2). Do not introduce minified one-line application code. Generated files listed in .prettierignore are produced by the Python build script. The build accepts formatted multiline HTML tags and inlines all JS/CSS for offline use.

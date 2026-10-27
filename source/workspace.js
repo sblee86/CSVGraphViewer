@@ -1,34 +1,317 @@
 // File System Access handles are retained in IndexedDB; permissions stay under Chrome control.
-let workRoot=null,workspaceCsv=[],workspaceEpoch=0,rememberedRoot=null;
-const workspaceDialog=document.createElement('dialog');workspaceDialog.id='workspaceDialog';
-workspaceDialog.innerHTML=`<h2>작업폴더 선택</h2><p>CSV 목록, 그래프 양식과 설정을 이 폴더에서 관리합니다.</p><p id="workspaceStartupNote">처음 사용할 작업폴더를 선택하세요.</p><button id="workspaceResume" hidden>이전 작업폴더 연결</button><button id="workspaceChoose" class="solid">작업폴더 선택</button><p class="help">양식/ : 그래프 양식 · 내보내기/ : CSV와 PNG · CSVtoGraphViewer.settings.json : 화면 설정<br>CSV 원본은 수정하지 않습니다. 브라우저는 전체 디스크 경로 대신 선택한 폴더 이름을 표시합니다.</p>`;
-document.body.append(workspaceDialog);workspaceDialog.addEventListener('cancel',e=>e.preventDefault());
-const workspaceBar=document.createElement('div');workspaceBar.className='workspaceBar';workspaceBar.innerHTML='<b id="workspaceLocation">작업폴더 미연결</b><button id="workspaceChange">작업폴더 변경</button><button id="workspaceRefresh">목록 새로고침</button><span id="workspaceSummary"></span>';
+let workRoot = null,
+  workspaceCsv = [],
+  workspaceEpoch = 0,
+  rememberedRoot = null;
+const workspaceDialog = document.createElement('dialog');
+workspaceDialog.id = 'workspaceDialog';
+workspaceDialog.innerHTML = `<h2>작업폴더 선택</h2><p>CSV 목록, 그래프 양식과 설정을 이 폴더에서 관리합니다.</p><p id="workspaceStartupNote">처음 사용할 작업폴더를 선택하세요.</p><button id="workspaceResume" hidden>이전 작업폴더 연결</button><button id="workspaceChoose" class="solid">작업폴더 선택</button><p class="help">양식/ : 그래프 양식 · 내보내기/ : CSV와 PNG · CSVtoGraphViewer.settings.json : 화면 설정<br>CSV 원본은 수정하지 않습니다. 브라우저는 전체 디스크 경로 대신 선택한 폴더 이름을 표시합니다.</p>`;
+document.body.append(workspaceDialog);
+workspaceDialog.addEventListener('cancel', (e) => e.preventDefault());
+const workspaceBar = document.createElement('div');
+workspaceBar.className = 'workspaceBar';
+workspaceBar.innerHTML =
+  '<b id="workspaceLocation">작업폴더 미연결</b><button id="workspaceChange">작업폴더 변경</button><button id="workspaceRefresh">목록 새로고침</button><span id="workspaceSummary"></span>';
 document.querySelector('nav').after(workspaceBar);
-const csvPanel=document.createElement('section');csvPanel.id='workspaceCsvPanel';csvPanel.innerHTML='<div class="panelhead">작업폴더 CSV</div><input id="workspaceCsvSearch" placeholder="CSV 파일명·하위폴더 검색"><div id="workspaceCsvList"></div>';
-$('left').insertBefore(csvPanel,$('templatePanel').nextSibling);dataNodes.unshift(csvPanel);
-settingsDialog.querySelector('.settingsRows').insertAdjacentHTML('beforebegin','<p id="workspaceSettingsLocation" class="settingsNote">작업폴더 미연결</p>');
-function workspaceStore(mode,handle){return new Promise((resolve,reject)=>{const req=indexedDB.open('CSVtoGraphViewer-workspace',1);req.onupgradeneeded=()=>req.result.createObjectStore('handles');req.onerror=()=>reject(req.error);req.onsuccess=()=>{const db=req.result,tx=db.transaction('handles',mode),st=tx.objectStore('handles');let r=mode==='readwrite'?st.put(handle,'root'):st.get('root');tx.oncomplete=()=>{resolve(r.result);db.close()};tx.onerror=()=>{reject(tx.error);db.close()}}})}
-function safeFileName(name){let n=String(name).replace(/[\\/:*?"<>|\x00-\x1f]/g,'_').replace(/[. ]+$/g,'').slice(0,140);return n||'untitled'}
-async function writeWorkspaceFile(dir,name,contents){const file=await dir.getFileHandle(name,{create:true});const stream=await file.createWritable();try{await stream.write(contents);await stream.close()}catch(e){try{await stream.abort()}catch{}throw e}}
-async function readWorkspaceSettings(root){try{const f=await root.getFileHandle('CSVtoGraphViewer.settings.json');const v=JSON.parse(await(await f.getFile()).text());if(v.format!=='CSVtoGraphViewer-settings'||v.version!==1||!v.preferences)throw Error('설정 형식 오류');viewerPrefs=normalizePrefs(v.preferences);applyViewerPrefs();fillPrefs()}catch(e){viewerPrefs={...viewerDefaults};applyViewerPrefs();fillPrefs();if(e.name!=='NotFoundError')notice('작업폴더 설정을 읽지 못해 기본값을 적용했습니다: '+e.message)}}
-async function persistWorkspaceSettings(){if(!workRoot)throw Error('작업폴더를 먼저 연결하세요.');await writeWorkspaceFile(workRoot,'CSVtoGraphViewer.settings.json',JSON.stringify({format:'CSVtoGraphViewer-settings',version:1,preferences:viewerPrefs},null,2))}
-async function activateWorkspace(root){if(await root.queryPermission({mode:'readwrite'})!=='granted')throw Error('작업폴더 읽기·쓰기 권한이 필요합니다.');workspaceEpoch++;workRoot=root;templates=[];templatePending=null;stopPlayback();await readWorkspaceSettings(root);try{await root.getFileHandle('CSVtoGraphViewer.settings.json')}catch(e){if(e.name==='NotFoundError')await persistWorkspaceSettings()}
- $('workspaceLocation').textContent='작업폴더: '+root.name; $('workspaceSettingsLocation').textContent='설정 저장 위치: '+root.name+'/CSVtoGraphViewer.settings.json';
- try{await workspaceStore('readwrite',root)}catch{notice('폴더 위치를 기억하지 못했습니다. 다음 실행에 다시 선택하세요.')}await refreshWorkspace();workspaceDialog.close()}
-async function chooseWorkspace(){if(!window.showDirectoryPicker)return;try{const h=await window.showDirectoryPicker({id:'CSVtoGraphViewer-workspace',mode:'readwrite'});await activateWorkspace(h)}catch(e){if(e.name!=='AbortError')notice('작업폴더 연결 실패: '+e.message)}}
-async function refreshWorkspace(){if(!workRoot)return;const root=workRoot,epoch=workspaceEpoch,files=[],forms=[];let failures=0;async function walk(dir,path){for await(const [name,entry] of dir.entries()){const rel=path?path+'/'+name:name;if(entry.kind==='directory'){if(rel==='양식'||rel==='내보내기')continue;await walk(entry,rel)}else if(/\.(csv|tsv)$/i.test(name))files.push({name,path:rel,handle:entry})}}
- async function readForms(dir,path){for await(const [name,entry] of dir.entries()){const rel=path+'/'+name;if(entry.kind==='directory')await readForms(entry,rel);else if(/\.json$/i.test(name)){try{const v=validateTemplate(JSON.parse(await(await entry.getFile()).text()));forms.push({name:v.name,path:rel,data:v})}catch{failures++}}}}
- try{await walk(root,'');try{await readForms(await root.getDirectoryHandle('양식'),'양식')}catch(e){if(e.name!=='NotFoundError')throw e}if(epoch!==workspaceEpoch)return;workspaceCsv=files.sort((a,b)=>a.path.localeCompare(b.path,'ko'));templates=forms.sort((a,b)=>a.name.localeCompare(b.name,'ko'));renderWorkspaceCsv();renderTemplates();$('workspaceSummary').textContent=`CSV ${files.length}개 · 양식 ${forms.length}개${failures?' · 양식 오류 '+failures+'개':''}`}catch(e){notice('폴더 목록 읽기 실패: '+e.message)}}
-function renderWorkspaceCsv(){const q=$('workspaceCsvSearch').value.toLowerCase();$('workspaceCsvList').innerHTML=workspaceCsv.map((f,i)=>f.path.toLowerCase().includes(q)?`<button class="workspaceCsvItem" data-csv="${i}" title="${esc(f.path)}">${esc(f.path)}</button>`:'').join('')||'<p class="help">표시할 CSV가 없습니다.</p>';$('workspaceCsvList').querySelectorAll('[data-csv]').forEach(b=>b.onclick=async()=>{const epoch=workspaceEpoch;try{const f=workspaceCsv[+b.dataset.csv],file=await f.handle.getFile(),buffer=await file.arrayBuffer();if(epoch!==workspaceEpoch)return;lastName=f.path;lastBuffer=buffer;await readBuffer()}catch(e){notice('CSV 읽기 실패: '+e.message)}})}
-$('workspaceCsvSearch').oninput=renderWorkspaceCsv;$('workspaceChoose').onclick=chooseWorkspace;$('workspaceChange').onclick=chooseWorkspace;$('workspaceRefresh').onclick=refreshWorkspace;
-$('workspaceResume').onclick=async()=>{try{if(await rememberedRoot.requestPermission({mode:'readwrite'})!=='granted')return notice('폴더 권한이 허용되지 않았습니다.');await activateWorkspace(rememberedRoot)}catch(e){notice('이전 폴더 연결 실패: '+e.message)}};
-$('saveTemplate').onclick=async()=>{if(!workRoot)return notice('작업폴더를 먼저 연결하세요.');if(!headers.length)return notice('CSV를 먼저 불러오세요.');try{const v=captureTemplate(),dir=await workRoot.getDirectoryHandle('양식',{create:true}),name=safeFileName(v.name)+'.json';try{await dir.getFileHandle(name);if(!confirm('같은 이름의 양식이 있습니다. 덮어쓸까요?\n양식/'+name))return}catch(e){if(e.name!=='NotFoundError')throw e}await writeWorkspaceFile(dir,name,JSON.stringify(v,null,2));await refreshWorkspace();notice('양식 저장 완료: '+workRoot.name+'/양식/'+name)}catch(e){notice('양식 저장 실패: '+e.message)}};
-$('saveTemplate').textContent='작업폴더에 양식 저장';$('openFolder').textContent='양식 목록 새로고침';$('openFolder').onclick=refreshWorkspace;
+const csvPanel = document.createElement('section');
+csvPanel.id = 'workspaceCsvPanel';
+csvPanel.innerHTML =
+  '<div class="panelhead">작업폴더 CSV</div><input id="workspaceCsvSearch" placeholder="CSV 파일명·하위폴더 검색"><div id="workspaceCsvList"></div>';
+$('left').insertBefore(csvPanel, $('templatePanel').nextSibling);
+dataNodes.unshift(csvPanel);
+settingsDialog
+  .querySelector('.settingsRows')
+  .insertAdjacentHTML(
+    'beforebegin',
+    '<p id="workspaceSettingsLocation" class="settingsNote">작업폴더 미연결</p>',
+  );
+function workspaceStore(mode, handle) {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('CSVtoGraphViewer-workspace', 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('handles');
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const db = req.result,
+        tx = db.transaction('handles', mode),
+        st = tx.objectStore('handles');
+      let r = mode === 'readwrite' ? st.put(handle, 'root') : st.get('root');
+      tx.oncomplete = () => {
+        resolve(r.result);
+        db.close();
+      };
+      tx.onerror = () => {
+        reject(tx.error);
+        db.close();
+      };
+    };
+  });
+}
+function safeFileName(name) {
+  let n = String(name)
+    .replace(/[\\/:*?"<>|\x00-\x1f]/g, '_')
+    .replace(/[. ]+$/g, '')
+    .slice(0, 140);
+  return n || 'untitled';
+}
+async function writeWorkspaceFile(dir, name, contents) {
+  const file = await dir.getFileHandle(name, { create: true });
+  const stream = await file.createWritable();
+  try {
+    await stream.write(contents);
+    await stream.close();
+  } catch (e) {
+    try {
+      await stream.abort();
+    } catch {}
+    throw e;
+  }
+}
+async function readWorkspaceSettings(root) {
+  try {
+    const f = await root.getFileHandle('CSVtoGraphViewer.settings.json');
+    const v = JSON.parse(await (await f.getFile()).text());
+    if (v.format !== 'CSVtoGraphViewer-settings' || v.version !== 1 || !v.preferences)
+      throw Error('설정 형식 오류');
+    viewerPrefs = normalizePrefs(v.preferences);
+    applyViewerPrefs();
+    fillPrefs();
+  } catch (e) {
+    viewerPrefs = { ...viewerDefaults };
+    applyViewerPrefs();
+    fillPrefs();
+    if (e.name !== 'NotFoundError')
+      notice('작업폴더 설정을 읽지 못해 기본값을 적용했습니다: ' + e.message);
+  }
+}
+async function persistWorkspaceSettings() {
+  if (!workRoot) throw Error('작업폴더를 먼저 연결하세요.');
+  await writeWorkspaceFile(
+    workRoot,
+    'CSVtoGraphViewer.settings.json',
+    JSON.stringify(
+      { format: 'CSVtoGraphViewer-settings', version: 1, preferences: viewerPrefs },
+      null,
+      2,
+    ),
+  );
+}
+async function activateWorkspace(root) {
+  if ((await root.queryPermission({ mode: 'readwrite' })) !== 'granted')
+    throw Error('작업폴더 읽기·쓰기 권한이 필요합니다.');
+  workspaceEpoch++;
+  workRoot = root;
+  templates = [];
+  templatePending = null;
+  stopPlayback();
+  await readWorkspaceSettings(root);
+  try {
+    await root.getFileHandle('CSVtoGraphViewer.settings.json');
+  } catch (e) {
+    if (e.name === 'NotFoundError') await persistWorkspaceSettings();
+  }
+  $('workspaceLocation').textContent = '작업폴더: ' + root.name;
+  $('workspaceSettingsLocation').textContent =
+    '설정 저장 위치: ' + root.name + '/CSVtoGraphViewer.settings.json';
+  try {
+    await workspaceStore('readwrite', root);
+  } catch {
+    notice('폴더 위치를 기억하지 못했습니다. 다음 실행에 다시 선택하세요.');
+  }
+  await refreshWorkspace();
+  workspaceDialog.close();
+}
+async function chooseWorkspace() {
+  if (!window.showDirectoryPicker) return;
+  try {
+    const h = await window.showDirectoryPicker({
+      id: 'CSVtoGraphViewer-workspace',
+      mode: 'readwrite',
+    });
+    await activateWorkspace(h);
+  } catch (e) {
+    if (e.name !== 'AbortError') notice('작업폴더 연결 실패: ' + e.message);
+  }
+}
+async function refreshWorkspace() {
+  if (!workRoot) return;
+  const root = workRoot,
+    epoch = workspaceEpoch,
+    files = [],
+    forms = [];
+  let failures = 0;
+  async function walk(dir, path) {
+    for await (const [name, entry] of dir.entries()) {
+      const rel = path ? path + '/' + name : name;
+      if (entry.kind === 'directory') {
+        if (rel === '양식' || rel === '내보내기') continue;
+        await walk(entry, rel);
+      } else if (/\.(csv|tsv)$/i.test(name)) files.push({ name, path: rel, handle: entry });
+    }
+  }
+  async function readForms(dir, path) {
+    for await (const [name, entry] of dir.entries()) {
+      const rel = path + '/' + name;
+      if (entry.kind === 'directory') await readForms(entry, rel);
+      else if (/\.json$/i.test(name)) {
+        try {
+          const v = validateTemplate(JSON.parse(await (await entry.getFile()).text()));
+          forms.push({ name: v.name, path: rel, data: v });
+        } catch {
+          failures++;
+        }
+      }
+    }
+  }
+  try {
+    await walk(root, '');
+    try {
+      await readForms(await root.getDirectoryHandle('양식'), '양식');
+    } catch (e) {
+      if (e.name !== 'NotFoundError') throw e;
+    }
+    if (epoch !== workspaceEpoch) return;
+    workspaceCsv = files.sort((a, b) => a.path.localeCompare(b.path, 'ko'));
+    templates = forms.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+    renderWorkspaceCsv();
+    renderTemplates();
+    $('workspaceSummary').textContent =
+      `CSV ${files.length}개 · 양식 ${forms.length}개${failures ? ' · 양식 오류 ' + failures + '개' : ''}`;
+  } catch (e) {
+    notice('폴더 목록 읽기 실패: ' + e.message);
+  }
+}
+function renderWorkspaceCsv() {
+  const q = $('workspaceCsvSearch').value.toLowerCase();
+  $('workspaceCsvList').innerHTML =
+    workspaceCsv
+      .map((f, i) =>
+        f.path.toLowerCase().includes(q)
+          ? `<button class="workspaceCsvItem" data-csv="${i}" title="${esc(f.path)}">${esc(f.path)}</button>`
+          : '',
+      )
+      .join('') || '<p class="help">표시할 CSV가 없습니다.</p>';
+  $('workspaceCsvList')
+    .querySelectorAll('[data-csv]')
+    .forEach(
+      (b) =>
+        (b.onclick = async () => {
+          const epoch = workspaceEpoch;
+          try {
+            const f = workspaceCsv[+b.dataset.csv],
+              file = await f.handle.getFile(),
+              buffer = await file.arrayBuffer();
+            if (epoch !== workspaceEpoch) return;
+            lastName = f.path;
+            lastBuffer = buffer;
+            await readBuffer();
+          } catch (e) {
+            notice('CSV 읽기 실패: ' + e.message);
+          }
+        }),
+    );
+}
+$('workspaceCsvSearch').oninput = renderWorkspaceCsv;
+$('workspaceChoose').onclick = chooseWorkspace;
+$('workspaceChange').onclick = chooseWorkspace;
+$('workspaceRefresh').onclick = refreshWorkspace;
+$('workspaceResume').onclick = async () => {
+  try {
+    if ((await rememberedRoot.requestPermission({ mode: 'readwrite' })) !== 'granted')
+      return notice('폴더 권한이 허용되지 않았습니다.');
+    await activateWorkspace(rememberedRoot);
+  } catch (e) {
+    notice('이전 폴더 연결 실패: ' + e.message);
+  }
+};
+$('saveTemplate').onclick = async () => {
+  if (!workRoot) return notice('작업폴더를 먼저 연결하세요.');
+  if (!headers.length) return notice('CSV를 먼저 불러오세요.');
+  try {
+    const v = captureTemplate(),
+      dir = await workRoot.getDirectoryHandle('양식', { create: true }),
+      name = safeFileName(v.name) + '.json';
+    try {
+      await dir.getFileHandle(name);
+      if (!confirm('같은 이름의 양식이 있습니다. 덮어쓸까요?\n양식/' + name)) return;
+    } catch (e) {
+      if (e.name !== 'NotFoundError') throw e;
+    }
+    await writeWorkspaceFile(dir, name, JSON.stringify(v, null, 2));
+    await refreshWorkspace();
+    notice('양식 저장 완료: ' + workRoot.name + '/양식/' + name);
+  } catch (e) {
+    notice('양식 저장 실패: ' + e.message);
+  }
+};
+$('saveTemplate').textContent = '작업폴더에 양식 저장';
+$('openFolder').textContent = '양식 목록 새로고침';
+$('openFolder').onclick = refreshWorkspace;
 // Explicitly imported templates are copied into the workspace, making them available next launch.
-$('templateFiles').onchange=async e=>{const files=[...e.target.files];e.target.value='';if(!workRoot)return notice('작업폴더를 먼저 연결하세요.');let ok=0,failed=0;for(const f of files){try{const v=validateTemplate(JSON.parse(await f.text())),dir=await workRoot.getDirectoryHandle('양식',{create:true}),name=safeFileName(v.name)+'.json';try{await dir.getFileHandle(name);if(!confirm('양식/'+name+'을 덮어쓸까요?'))continue}catch(err){if(err.name!=='NotFoundError')throw err}await writeWorkspaceFile(dir,name,JSON.stringify(v,null,2));ok++}catch{failed++}}await refreshWorkspace();notice(`양식 가져오기 ${ok}개${failed?' · 실패 '+failed+'개':''}`)};
-const previousPrefsSave=saveViewerPrefs;
-saveViewerPrefs=async function(){try{await persistWorkspaceSettings();previousPrefsSave();return true}catch(e){notice('설정 파일 저장 실패: '+e.message);return false}};
-$('prefsSave').onclick=async()=>{if(![...settingsDialog.querySelectorAll('input')].every(el=>el.reportValidity()))return;viewerPrefs=normalizePrefs(viewerPrefs);if(!await saveViewerPrefs())return;prefsBefore=null;settingsDialog.close()};
+$('templateFiles').onchange = async (e) => {
+  const files = [...e.target.files];
+  e.target.value = '';
+  if (!workRoot) return notice('작업폴더를 먼저 연결하세요.');
+  let ok = 0,
+    failed = 0;
+  for (const f of files) {
+    try {
+      const v = validateTemplate(JSON.parse(await f.text())),
+        dir = await workRoot.getDirectoryHandle('양식', { create: true }),
+        name = safeFileName(v.name) + '.json';
+      try {
+        await dir.getFileHandle(name);
+        if (!confirm('양식/' + name + '을 덮어쓸까요?')) continue;
+      } catch (err) {
+        if (err.name !== 'NotFoundError') throw err;
+      }
+      await writeWorkspaceFile(dir, name, JSON.stringify(v, null, 2));
+      ok++;
+    } catch {
+      failed++;
+    }
+  }
+  await refreshWorkspace();
+  notice(`양식 가져오기 ${ok}개${failed ? ' · 실패 ' + failed + '개' : ''}`);
+};
+const previousPrefsSave = saveViewerPrefs;
+saveViewerPrefs = async function () {
+  try {
+    await persistWorkspaceSettings();
+    previousPrefsSave();
+    return true;
+  } catch (e) {
+    notice('설정 파일 저장 실패: ' + e.message);
+    return false;
+  }
+};
+$('prefsSave').onclick = async () => {
+  if (![...settingsDialog.querySelectorAll('input')].every((el) => el.reportValidity())) return;
+  viewerPrefs = normalizePrefs(viewerPrefs);
+  if (!(await saveViewerPrefs())) return;
+  prefsBefore = null;
+  settingsDialog.close();
+};
 workspaceDialog.showModal();
-(async()=>{if(!window.showDirectoryPicker){$('workspaceStartupNote').textContent='작업폴더 기능을 지원하는 데스크톱 Chrome 또는 Edge에서 HTML 파일을 열어주세요.';$('workspaceChoose').disabled=true;return}try{rememberedRoot=await workspaceStore('readonly');if(rememberedRoot){$('workspaceResume').hidden=false;$('workspaceResume').textContent='이전 작업폴더 연결: '+rememberedRoot.name;if(await rememberedRoot.queryPermission({mode:'readwrite'})==='granted')await activateWorkspace(rememberedRoot);else $('workspaceStartupNote').textContent='이전 작업폴더를 연결하거나 다른 폴더를 선택하세요.'}}catch{$('workspaceStartupNote').textContent='작업폴더를 선택하세요. 이 환경에서는 폴더 위치가 기억되지 않을 수 있습니다.'}})();
+(async () => {
+  if (!window.showDirectoryPicker) {
+    $('workspaceStartupNote').textContent =
+      '작업폴더 기능을 지원하는 데스크톱 Chrome 또는 Edge에서 HTML 파일을 열어주세요.';
+    $('workspaceChoose').disabled = true;
+    return;
+  }
+  try {
+    rememberedRoot = await workspaceStore('readonly');
+    if (rememberedRoot) {
+      $('workspaceResume').hidden = false;
+      $('workspaceResume').textContent = '이전 작업폴더 연결: ' + rememberedRoot.name;
+      if ((await rememberedRoot.queryPermission({ mode: 'readwrite' })) === 'granted')
+        await activateWorkspace(rememberedRoot);
+      else
+        $('workspaceStartupNote').textContent =
+          '이전 작업폴더를 연결하거나 다른 폴더를 선택하세요.';
+    }
+  } catch {
+    $('workspaceStartupNote').textContent =
+      '작업폴더를 선택하세요. 이 환경에서는 폴더 위치가 기억되지 않을 수 있습니다.';
+  }
+})();
