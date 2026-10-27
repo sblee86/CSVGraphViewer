@@ -1,1 +1,1 @@
-window.CSV_GRAPH_BUILD={"version": "1.0.5", "built_at": "2026-10-26T19:35:07+09:00", "source_hash": "cc94ad68e59b5ed11dba5f3900c0f33164402804656ea923b966a6c3eee7eefb"};
+window.CSV_GRAPH_BUILD={"version": "1.0.6", "built_at": "2026-10-27T13:29:02+09:00", "source_hash": "a0cad7fb60723f864262e720356990b21005ee97b06f80a71303e217ac48fda8"};
