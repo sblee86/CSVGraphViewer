@@ -28,3 +28,12 @@ for(const name of ['pointerup','pointercancel','lostpointercapture'])previewResi
 previewResize.onkeydown=e=>{if(!['ArrowUp','ArrowDown','Home','End'].includes(e.key))return;e.preventDefault();resizeDock(e.key==='Home'?160:e.key==='End'?800:viewerPrefs.previewHeight+(e.key==='ArrowUp'?10:-10));savePanelPrefsSoon();draw()};
 const pngBeforePanels=$('png').onclick;$('png').onclick=()=>{if(!graphDisclosure.open){viewerPrefs.graphCollapsed=false;window.applyPanelPrefs();savePanelPrefsSoon();requestAnimationFrame(()=>requestAnimationFrame(()=>{draw();pngBeforePanels()}))}else pngBeforePanels()};
 window.applyPanelPrefs();
+
+// 2D uses an X column plus Y signal checkboxes; 3D uses coordinate dropdowns.
+const xAxisCaption=$('x').previousElementSibling,yCoordinateLabel=$('yaxis3').closest('label'),zCoordinateLabel=$('zaxis').closest('label'),timeCoordinateLabel=$('taxis').closest('label');
+yCoordinateLabel.firstChild.textContent='Y축';zCoordinateLabel.firstChild.textContent='Z축';
+const coordinateNote=document.createElement('p');coordinateNote.className='help';coordinateNote.textContent='3D는 같은 CSV의 X·Y·Z 열을 선택하세요. T는 시간 열 또는 행 순서입니다.';
+graphSections.axes.panel.prepend(xAxisCaption,$('x'),yCoordinateLabel,zCoordinateLabel,timeCoordinateLabel,coordinateNote);
+const ySignalControls=[$('selection').closest('.row'),$('search'),$('all').parentElement,$('columns'),document.querySelector('.fileXSection')];
+function syncDimensionAxisControls(){const is3d=$('dimension').value==='3d';yCoordinateLabel.hidden=!is3d;zCoordinateLabel.hidden=!is3d;coordinateNote.hidden=!is3d;xAxisCaption.textContent=is3d?'X축':'X축 (공통 X열)';for(const element of ySignalControls)if(element)element.hidden=is3d;$('layout').closest('label').hidden=is3d}
+const drawBeforeDimensionAxisControls=draw;draw=function(){syncDimensionAxisControls();drawBeforeDimensionAxisControls()};syncDimensionAxisControls();
