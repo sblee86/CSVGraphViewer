@@ -1,95 +1,620 @@
 // Each CSV retains its own rows, X values and column identity. Files are never
 // joined by row number or timestamp: each selected signal uses its source rows.
-let csvSources=[],columnMeta=[],multiReadSequence=0;
-const singleLoad=load,singleUpdate=update,singleCapture=captureTemplate,singleApplyTemplate=applyTemplate;
-function parseSource(text,path,buffer=null){const data=parseCSV(text,$('delimiter').value);if(data.length<2)throw Error('제목 행과 데이터 행이 필요합니다.');const head=data.shift().map((h,i)=>h.trim()||`열 ${i+1}`);const bad=data.findIndex(r=>r.length!==head.length);if(bad>=0)throw Error(`${bad+2}행의 열 수가 다릅니다.`);const numeric=head.map((_,i)=>data.some(r=>Number.isFinite(num(r[i]))));if(!numeric.some(Boolean))throw Error('숫자 열이 없습니다.');return {path,head,data,numeric,buffer,x:numeric.indexOf(true)}}
-function sourceLabel(source){return source.path}
-function sourceColumnRef(source,index){return {file:source.path,column:source.head[index],occurrence:source.head.slice(0,index).filter(h=>h===source.head[index]).length}}
-function columnRef(index){const m=columnMeta[index];if(!m)return null;return {...sourceColumnRef(csvSources[m.source],m.local),name:headers[index]}}
-function findColumn(ref){if(ref?.row)return -1;if(!ref)return null;if(typeof ref.file==='string'&&typeof ref.column==='string'){const i=columnMeta.findIndex(m=>{const s=csvSources[m.source],r=sourceColumnRef(s,m.local);return r.file===ref.file&&r.column===ref.column&&r.occurrence===(ref.occurrence||0)});return i<0?null:i}const exact=headers.map((h,i)=>h===ref.name?i:-1).filter(i=>i>=0);if(exact.length)return exact[ref.occurrence||0]??null; // Backward-compatible single-file templates.
- const matches=columnMeta.map((m,i)=>csvSources[m.source].head[m.local]===ref.name?i:-1).filter(i=>i>=0);return matches[ref.occurrence||0]??null}
-axisRef=function(id){return +$(id).value===-1?{row:true}:columnRef(+$(id).value)};
-resolveRef=findColumn;
-function showMultiWarning(text){$('multiWarning').textContent=text;$('multiWarning').hidden=!text}
-function rebuildSources(preserve=true){stopPlayback();const prior=preserve?[...selected].map(columnRef).filter(Boolean):[],oldX=preserve?axisRef('x'):null;headers=[];numeric=[];rows=[];columnMeta=[];
- csvSources.forEach((s,source)=>{s.offset=headers.length;s.head.forEach((name,local)=>{headers.push(csvSources.length===1?name:sourceLabel(s)+' / '+name);numeric.push(s.numeric[local]);columnMeta.push({source,local})})});
- csvSources.forEach((s,source)=>{for(let localIndex=0;localIndex<s.data.length;localIndex++){const row=Array(headers.length).fill('');s.data[localIndex].forEach((v,i)=>row[s.offset+i]=v);Object.defineProperties(row,{_source:{value:source},_localIndex:{value:localIndex}});rows.push(row)}});
- selected=new Set(prior.map(findColumn).filter(i=>i!==null&&i>=0&&numeric[i]));if(!selected.size)csvSources.forEach(s=>{const local=s.numeric.findIndex((v,i)=>v&&i!==s.x);if(local>=0)selected.add(s.offset+local)});if($('selection').value==='single'&&selected.size>1)selected=new Set([[...selected][0]]);
- conditions=[];view=null;manualY=null;for(const id of ['xmin','xmax','ymin','ymax'])$(id).value='';
- $('x').innerHTML='<option value="-1">각 파일 행 번호</option>'+headers.map((h,i)=>`<option value="${i}">${esc(h)}${numeric[i]?'':' (문자)'}</option>`).join('');$('x').value=String(findColumn(oldX)??(csvSources[0]?csvSources[0].offset+csvSources[0].x:-1));axisOptions();
- const label=csvSources.length===1?csvSources[0].path:`CSV ${csvSources.length}개`;$('filename').textContent=label;$('filelabel').textContent=label;$('filesub').textContent=`${rows.length.toLocaleString()}행 · ${headers.length}열 (파일별 독립 X축)`;$('colcount').textContent=headers.length;$('search').value='';
- renderLoadedSources();renderFileX();renderColumns();renderFilters();update();if(templatePending)applyTemplate(templatePending)
+let csvSources = [],
+  columnMeta = [],
+  multiReadSequence = 0;
+const singleLoad = load,
+  singleUpdate = update,
+  singleCapture = captureTemplate,
+  singleApplyTemplate = applyTemplate;
+function parseSource(text, path, buffer = null) {
+  const data = parseCSV(text, $('delimiter').value);
+  if (data.length < 2) throw Error('제목 행과 데이터 행이 필요합니다.');
+  const head = data.shift().map((h, i) => h.trim() || `열 ${i + 1}`);
+  const bad = data.findIndex((r) => r.length !== head.length);
+  if (bad >= 0) throw Error(`${bad + 2}행의 열 수가 다릅니다.`);
+  const numeric = head.map((_, i) => data.some((r) => Number.isFinite(num(r[i]))));
+  if (!numeric.some(Boolean)) throw Error('숫자 열이 없습니다.');
+  return { path, head, data, numeric, buffer, x: numeric.indexOf(true) };
+}
+function sourceLabel(source) {
+  return source.path;
+}
+function sourceColumnRef(source, index) {
+  return {
+    file: source.path,
+    column: source.head[index],
+    occurrence: source.head.slice(0, index).filter((h) => h === source.head[index]).length,
+  };
+}
+function columnRef(index) {
+  const m = columnMeta[index];
+  if (!m) return null;
+  return { ...sourceColumnRef(csvSources[m.source], m.local), name: headers[index] };
+}
+function findColumn(ref) {
+  if (ref?.row) return -1;
+  if (!ref) return null;
+  if (typeof ref.file === 'string' && typeof ref.column === 'string') {
+    const i = columnMeta.findIndex((m) => {
+      const s = csvSources[m.source],
+        r = sourceColumnRef(s, m.local);
+      return (
+        r.file === ref.file && r.column === ref.column && r.occurrence === (ref.occurrence || 0)
+      );
+    });
+    return i < 0 ? null : i;
+  }
+  const exact = headers.map((h, i) => (h === ref.name ? i : -1)).filter((i) => i >= 0);
+  if (exact.length) return exact[ref.occurrence || 0] ?? null; // Backward-compatible single-file templates.
+  const matches = columnMeta
+    .map((m, i) => (csvSources[m.source].head[m.local] === ref.name ? i : -1))
+    .filter((i) => i >= 0);
+  return matches[ref.occurrence || 0] ?? null;
+}
+axisRef = function (id) {
+  return +$(id).value === -1 ? { row: true } : columnRef(+$(id).value);
+};
+resolveRef = findColumn;
+function showMultiWarning(text) {
+  $('multiWarning').textContent = text;
+  $('multiWarning').hidden = !text;
+}
+function rebuildSources(preserve = true) {
+  stopPlayback();
+  const prior = preserve ? [...selected].map(columnRef).filter(Boolean) : [],
+    oldX = preserve ? axisRef('x') : null;
+  headers = [];
+  numeric = [];
+  rows = [];
+  columnMeta = [];
+  csvSources.forEach((s, source) => {
+    s.offset = headers.length;
+    s.head.forEach((name, local) => {
+      headers.push(csvSources.length === 1 ? name : sourceLabel(s) + ' / ' + name);
+      numeric.push(s.numeric[local]);
+      columnMeta.push({ source, local });
+    });
+  });
+  csvSources.forEach((s, source) => {
+    for (let localIndex = 0; localIndex < s.data.length; localIndex++) {
+      const row = Array(headers.length).fill('');
+      s.data[localIndex].forEach((v, i) => (row[s.offset + i] = v));
+      Object.defineProperties(row, {
+        _source: { value: source },
+        _localIndex: { value: localIndex },
+      });
+      rows.push(row);
+    }
+  });
+  selected = new Set(prior.map(findColumn).filter((i) => i !== null && i >= 0 && numeric[i]));
+  if (!selected.size)
+    csvSources.forEach((s) => {
+      const local = s.numeric.findIndex((v, i) => v && i !== s.x);
+      if (local >= 0) selected.add(s.offset + local);
+    });
+  if ($('selection').value === 'single' && selected.size > 1)
+    selected = new Set([[...selected][0]]);
+  conditions = [];
+  view = null;
+  manualY = null;
+  for (const id of ['xmin', 'xmax', 'ymin', 'ymax']) $(id).value = '';
+  $('x').innerHTML =
+    '<option value="-1">각 파일 행 번호</option>' +
+    headers
+      .map((h, i) => `<option value="${i}">${esc(h)}${numeric[i] ? '' : ' (문자)'}</option>`)
+      .join('');
+  $('x').value = String(
+    findColumn(oldX) ?? (csvSources[0] ? csvSources[0].offset + csvSources[0].x : -1),
+  );
+  axisOptions();
+  const label = csvSources.length === 1 ? csvSources[0].path : `CSV ${csvSources.length}개`;
+  $('filename').textContent = label;
+  $('filelabel').textContent = label;
+  $('filesub').textContent =
+    `${rows.length.toLocaleString()}행 · ${headers.length}열 (파일별 독립 X축)`;
+  $('colcount').textContent = headers.length;
+  $('search').value = '';
+  renderLoadedSources();
+  renderFileX();
+  renderColumns();
+  renderFilters();
+  update();
+  if (templatePending) applyTemplate(templatePending);
 }
 // Keep existing callers (file loads and encoding reload) usable with the new data model.
-load=function(text,path){csvSources=[parseSource(text,path,lastBuffer)];rebuildSources(false)};
-async function addSourceFiles(entries){const sequence=++multiReadSequence;let pending=[],errors=[];for(const entry of entries){try{const f=entry.file||await entry.handle.getFile(),buffer=await f.arrayBuffer();const source=parseSource(new TextDecoder($('encoding').value).decode(buffer),entry.path||f.webkitRelativePath||f.name,buffer);source.displayPath=entry.displayPath||(entry.handle&&workRoot?workRoot.name+'/'+source.path:source.path);pending.push(source)}catch(e){errors.push((entry.path||entry.file?.name||'파일')+': '+e.message)}}if(sequence!==multiReadSequence)return;if(!pending.length){showMultiWarning(errors.join(' · '));return}const updated=[...csvSources];for(const s of pending){const i=updated.findIndex(v=>v.path===s.path);if(i>=0)updated[i]=s;else updated.push(s)}
- // Capture selected identities before replacing sources, so index changes cannot
- // connect a selected signal to another file during remove/reload operations.
- const selectionRefs=[...selected].map(columnRef).filter(Boolean),conditionRefs=conditions.map(f=>({ref:columnRef(f.col),min:f.min,max:f.max}));for(const next of updated){const old=csvSources.find(s=>s.path===next.path);if(old&&next!==old){if(old.x===-1)next.x=-1;else{const ref=sourceColumnRef(old,old.x),matches=next.head.map((h,i)=>h===ref.column?i:-1).filter(i=>i>=0),local=matches[ref.occurrence];if(local!==undefined&&next.numeric[local])next.x=local}}}csvSources=updated;rebuildSources(false);if(!templatePending){conditions=conditionRefs.flatMap(f=>{const col=findColumn(f.ref);return col===null?[]:[{col,min:f.min,max:f.max}]});renderFilters();const ids=selectionRefs.map(findColumn).filter(i=>i!==null&&i>=0&&numeric[i]);for(const s of pending){const source=csvSources.find(v=>v.path===s.path),local=source.numeric.findIndex((v,i)=>v&&i!==source.x);if(local>=0)ids.push(source.offset+local)}selected=new Set(ids);if($('selection').value==='single'&&selected.size>1)selected=new Set([[...selected][0]]);renderColumns();update()}if(errors.length)showMultiWarning('읽기 실패: '+errors.join(' · '));else if(!templatePending)showMultiWarning('');notice(`${pending.length}개 읽음 · 총 ${csvSources.length}개 CSV`)}
-$('file').multiple=true;$('file').onchange=async e=>{const files=[...e.target.files];e.target.value='';await addSourceFiles(files.map(file=>({file,path:file.webkitRelativePath||file.name})))};
-for(const id of ['encoding','delimiter'])$(id).onchange=async()=>{if(!csvSources.length)return;const entries=csvSources.filter(s=>s.buffer).map(s=>({path:s.path,displayPath:s.displayPath,file:new File([s.buffer],s.path.split('/').pop())}));await addSourceFiles(entries)};
+load = function (text, path) {
+  csvSources = [parseSource(text, path, lastBuffer)];
+  rebuildSources(false);
+};
+async function addSourceFiles(entries) {
+  const sequence = ++multiReadSequence;
+  let pending = [],
+    errors = [];
+  for (const entry of entries) {
+    try {
+      const f = entry.file || (await entry.handle.getFile()),
+        buffer = await f.arrayBuffer();
+      const source = parseSource(
+        new TextDecoder($('encoding').value).decode(buffer),
+        entry.path || f.webkitRelativePath || f.name,
+        buffer,
+      );
+      source.displayPath =
+        entry.displayPath ||
+        (entry.handle && workRoot ? workRoot.name + '/' + source.path : source.path);
+      pending.push(source);
+    } catch (e) {
+      errors.push((entry.path || entry.file?.name || '파일') + ': ' + e.message);
+    }
+  }
+  if (sequence !== multiReadSequence) return;
+  if (!pending.length) {
+    showMultiWarning(errors.join(' · '));
+    return;
+  }
+  const updated = [...csvSources];
+  for (const s of pending) {
+    const i = updated.findIndex((v) => v.path === s.path);
+    if (i >= 0) updated[i] = s;
+    else updated.push(s);
+  }
+  // Capture selected identities before replacing sources, so index changes cannot
+  // connect a selected signal to another file during remove/reload operations.
+  const selectionRefs = [...selected].map(columnRef).filter(Boolean),
+    conditionRefs = conditions.map((f) => ({ ref: columnRef(f.col), min: f.min, max: f.max }));
+  for (const next of updated) {
+    const old = csvSources.find((s) => s.path === next.path);
+    if (old && next !== old) {
+      if (old.x === -1) next.x = -1;
+      else {
+        const ref = sourceColumnRef(old, old.x),
+          matches = next.head.map((h, i) => (h === ref.column ? i : -1)).filter((i) => i >= 0),
+          local = matches[ref.occurrence];
+        if (local !== undefined && next.numeric[local]) next.x = local;
+      }
+    }
+  }
+  csvSources = updated;
+  rebuildSources(false);
+  if (!templatePending) {
+    conditions = conditionRefs.flatMap((f) => {
+      const col = findColumn(f.ref);
+      return col === null ? [] : [{ col, min: f.min, max: f.max }];
+    });
+    renderFilters();
+    const ids = selectionRefs.map(findColumn).filter((i) => i !== null && i >= 0 && numeric[i]);
+    for (const s of pending) {
+      const source = csvSources.find((v) => v.path === s.path),
+        local = source.numeric.findIndex((v, i) => v && i !== source.x);
+      if (local >= 0) ids.push(source.offset + local);
+    }
+    selected = new Set(ids);
+    if ($('selection').value === 'single' && selected.size > 1)
+      selected = new Set([[...selected][0]]);
+    renderColumns();
+    update();
+  }
+  if (errors.length) showMultiWarning('읽기 실패: ' + errors.join(' · '));
+  else if (!templatePending) showMultiWarning('');
+  notice(`${pending.length}개 읽음 · 총 ${csvSources.length}개 CSV`);
+}
+$('file').multiple = true;
+$('file').onchange = async (e) => {
+  const files = [...e.target.files];
+  e.target.value = '';
+  await addSourceFiles(files.map((file) => ({ file, path: file.webkitRelativePath || file.name })));
+};
+for (const id of ['encoding', 'delimiter'])
+  $(id).onchange = async () => {
+    if (!csvSources.length) return;
+    const entries = csvSources
+      .filter((s) => s.buffer)
+      .map((s) => ({
+        path: s.path,
+        displayPath: s.displayPath,
+        file: new File([s.buffer], s.path.split('/').pop()),
+      }));
+    await addSourceFiles(entries);
+  };
 // X values are picked independently in each file; rows from another file have
 // no Y value, so line rendering breaks instead of connecting unrelated signals.
-point=function(r){const s=csvSources[r.row._source];if(!s)return NaN;return s.x===-1?r.row._localIndex+1:num(r.row[s.offset+s.x])};
-update=function(){const savedConditions=conditions; // Apply each condition only to its owning CSV.
- const active=rows;rows=active.filter(row=>savedConditions.every(f=>{const meta=columnMeta[f.col];if(!meta||meta.source!==row._source||f.min===''&&f.max==='')return true;const v=num(row[f.col]);return Number.isFinite(v)&&(f.min===''||v>=+f.min)&&(f.max===''||v<=+f.max)}));conditions=[];try{singleUpdate()}finally{rows=active;conditions=savedConditions}
- $('total').textContent=rows.length.toLocaleString();$('status').textContent=`${csvSources.length}개 파일 · 조건 ${conditions.length}개 · ${rows.length-filtered.length}행 제외`;
- if(conditions.some(f=>f.min!==''&&f.max!==''&&+f.min>+f.max))$('status').textContent='조건 오류: 최소값이 최대값보다 큽니다.';
+point = function (r) {
+  const s = csvSources[r.row._source];
+  if (!s) return NaN;
+  return s.x === -1 ? r.row._localIndex + 1 : num(r.row[s.offset + s.x]);
 };
-$('x').onchange=()=>{const idx=+$('x').value,meta=columnMeta[idx];let fallback=[];for(const s of csvSources){if(idx===-1)s.x=-1;else{const matching=s.head.findIndex((h,i)=>h===csvSources[meta.source].head[meta.local]&&s.numeric[i]);if(matching>=0)s.x=matching;else{fallback.push(s.path);s.x=s.numeric.indexOf(true)}}}view=null;renderFileX();update();if(fallback.length)showMultiWarning('같은 X열이 없는 파일은 첫 숫자 열 사용: '+fallback.join(', '))};
-function renderFileX(){const container=$('fileXList');container.innerHTML=csvSources.map((s,i)=>`<label>${esc(sourceLabel(s))} · X축<select data-file-x="${i}"><option value="-1">행 번호</option>${s.head.map((h,k)=>s.numeric[k]?`<option value="${k}" ${s.x===k?'selected':''}>${esc(h)}</option>`:'').join('')}</select></label>`).join('');container.querySelectorAll('[data-file-x]').forEach(el=>{if(csvSources[+el.dataset.fileX].x===-1)el.value='-1';el.onchange=()=>{csvSources[+el.dataset.fileX].x=+el.value;view=null;update()}})}
-function renderLoadedSources(){$('loadedCsvList').innerHTML=csvSources.map((s,i)=>`<div class="loadedCsv"><span title="${esc(s.path)}">${esc(sourceLabel(s))}<small>${s.data.length}행 · ${s.head.length}열</small></span><button data-remove-source="${i}" title="불러온 목록에서 제외">×</button></div>`).join('')||'<p class="help">여러 CSV를 선택해 불러오세요.</p>';$('loadedCsvList').querySelectorAll('[data-remove-source]').forEach(b=>b.onclick=()=>{const refs=[...selected].map(columnRef).filter(Boolean);csvSources.splice(+b.dataset.removeSource,1);rebuildSources(false);if(!templatePending){selected=new Set(refs.map(findColumn).filter(i=>i!==null&&i>=0&&numeric[i]));renderColumns();update()}})}
-renderColumns=function(){const q=$('search').value.toLowerCase();$('columns').innerHTML=csvSources.map((s,source)=>{const cols=s.head.map((h,local)=>{const i=s.offset+local;return (s.path+' '+h).toLowerCase().includes(q)?`<label><input type="checkbox" data-col="${i}" ${selected.has(i)?'checked':''} ${numeric[i]?'':'disabled'}><span class="dot" style="background:${palette[i%8]}"></span><span>${esc(h)}</span></label>`:''}).join('');return cols?`<details class="sourceColumns" open><summary>${esc(sourceLabel(s))}</summary>${cols}</details>`:''}).join('');$('selectedCount').textContent=selected.size+'개 선택';$('columns').querySelectorAll('input').forEach(el=>el.onchange=()=>{if(el.checked){if($('selection').value==='single')selected.clear();selected.add(+el.dataset.col)}else selected.delete(+el.dataset.col);view=null;renderColumns();update()})};
-// Templates store paths and column names, never transient combined column indexes.
-captureTemplate=function(){const v=singleCapture();v.multiFileVersion=1;v.selected=[...selected].map(columnRef);v.conditions=conditions.map(f=>({axis:columnRef(f.col),min:f.min,max:f.max}));v.fileX=csvSources.map(s=>({file:s.path,axis:s.x===-1?{row:true}:sourceColumnRef(s,s.x)}));v.files=csvSources.map(s=>s.path);return v};
-applyTemplate=function(v){const missing=[];for(const ref of [v.x,v.y,v.z,v.t,...v.selected,...v.conditions.map(f=>f.axis)])if(ref&&!ref.row&&findColumn(ref)===null)missing.push(ref.file?ref.file+' / '+ref.column:ref.name);for(const entry of v.fileX||[]){const s=csvSources.find(s=>s.path===entry.file);if(!s){missing.push(entry.file);continue}if(entry.axis?.row)s.x=-1;else{const global=findColumn(entry.axis);if(global!==null)s.x=columnMeta[global].local;else missing.push(entry.file+' / '+entry.axis?.column)}}
- singleApplyTemplate(v);if(v.dimension==='3d'){for(const [id,ref] of [['x',v.x],['yaxis3',v.y],['zaxis',v.z]]){if(ref&&!ref.row&&findColumn(ref)===null){if(![...$(id).options].some(o=>o.value==='-2'))$(id).insertAdjacentHTML('beforeend','<option value="-2">양식의 열 없음</option>');$(id).value='-2'}}draw()}renderFileX();const unique=[...new Set(missing)].filter(Boolean);showMultiWarning(unique.length?'양식에서 찾지 못한 항목 '+unique.length+'개 · '+unique.slice(0,3).join(', ')+(unique.length>3?' …':''):'');};
-// Batch selection in the workspace browser, with files added to the current plot.
-const batch=document.createElement('div');batch.className='csvBatchActions';batch.innerHTML='<button id="checkAllCsv">전체 체크</button><button id="uncheckCsv">해제</button><button id="loadCheckedCsv" class="solid">선택 CSV 함께 열기</button>';csvPanel.insertBefore(batch,$('workspaceCsvList'));
-let checkedCsvPaths=new Set();
-renderWorkspaceCsv=function(){const q=$('workspaceCsvSearch').value.toLowerCase();$('workspaceCsvList').innerHTML=workspaceCsv.map((f,i)=>f.path.toLowerCase().includes(q)?`<div class="workspaceCsvRow"><input type="checkbox" data-check-csv="${i}" ${checkedCsvPaths.has(f.path)?'checked':''} aria-label="${esc(f.path)} 선택"><button class="workspaceCsvItem" data-add-csv="${i}">${esc(f.path)}</button></div>`:'').join('')||'<p class="help">표시할 CSV가 없습니다.</p>';$('workspaceCsvList').querySelectorAll('[data-check-csv]').forEach(c=>c.onchange=()=>{const path=workspaceCsv[+c.dataset.checkCsv].path;if(c.checked)checkedCsvPaths.add(path);else checkedCsvPaths.delete(path)});$('workspaceCsvList').querySelectorAll('[data-add-csv]').forEach(b=>b.onclick=()=>addSourceFiles([workspaceCsv[+b.dataset.addCsv]]))};
-$('checkAllCsv').onclick=()=>{const q=$('workspaceCsvSearch').value.toLowerCase();workspaceCsv.filter(f=>f.path.toLowerCase().includes(q)).forEach(f=>checkedCsvPaths.add(f.path));renderWorkspaceCsv()};$('uncheckCsv').onclick=()=>{checkedCsvPaths.clear();renderWorkspaceCsv()};$('loadCheckedCsv').onclick=()=>{const entries=workspaceCsv.filter(f=>checkedCsvPaths.has(f.path));if(!entries.length)return notice('CSV 파일을 체크하세요.');void addSourceFiles(entries)};
-const loadedPanel=document.createElement('section');loadedPanel.id='loadedCsvPanel';loadedPanel.innerHTML='<div class="panelhead">불러온 CSV</div><div id="loadedCsvList"></div><button id="clearLoadedCsv">불러온 파일 모두 닫기</button>';dataPanel.append(loadedPanel);
-$('clearLoadedCsv').onclick=()=>{multiReadSequence++;csvSources=[];templatePending=null;rebuildSources(false);showMultiWarning('')};
-const fileX=document.createElement('section');fileX.className='fileXSection';fileX.innerHTML='<div class="panelhead">파일별 X축</div><p class="help">각 신호는 해당 파일의 X열로 그립니다. 여러 파일을 같은 그래프에 겹치거나 신호별로 나눠 볼 수 있습니다.</p><div id="fileXList"></div>';graphSections.axes.panel.append(fileX);
-const warning=document.createElement('div');warning.id='multiWarning';warning.hidden=true;warning.setAttribute('role','status');document.querySelector('.content').prepend(warning);
-const axisReset=document.createElement('button');axisReset.id='resetAxisValues';axisReset.className='outline';axisReset.textContent='축 값 초기화';$('applybounds').after(axisReset);axisReset.onclick=()=>{view=null;manualY=null;for(const id of ['xmin','xmax','ymin','ymax'])$(id).value='';draw()};
-// Keep an opened workspace's data distinct when changing to another root.
-const previousActivateWorkspace=activateWorkspace;activateWorkspace=async function(root){await previousActivateWorkspace(root);multiReadSequence++;checkedCsvPaths.clear();csvSources=[];rebuildSources(false);renderWorkspaceCsv();showMultiWarning('')};
-renderLoadedSources();renderFileX();
-seriesRows=function(col){const meta=columnMeta[col];return meta?filtered.filter(r=>r.row._source===meta.source):filtered};
-// Sorting by T must not interleave unrelated files into a broken 2D line.
-ordered=function(){const ti=+$('taxis').value,ref=columnMeta[ti];return filtered.map(r=>{const s=csvSources[r.row._source];let local=-1;if(ref){const ts=csvSources[ref.source],same=s.head.map((h,i)=>h===ts.head[ref.local]?i:-1).filter(i=>i>=0);const occurrence=ts.head.slice(0,ref.local).filter(h=>h===ts.head[ref.local]).length;local=same[occurrence]??-1}return {r,t:ti===-1||local<0?r.row._localIndex+1:num(r.row[s.offset+local])}}).filter(o=>Number.isFinite(o.t)).filter(o=>$('dimension').value!=='3d'||!columnMeta[+$('x').value]||o.r.row._source===columnMeta[+$('x').value].source).sort((a,b)=>a.t-b.t||a.r.row._localIndex-b.r.row._localIndex)};
-const priorPointerMove=$('plot').onpointermove;
-function nearestHoveredSignal(c,p){
- const limit=Math.max(10,viewerPrefs.lineWidth+5,viewerPrefs.pointSize+5),visible=previewVisibleRows();let best=null;
- const consider=(col,r,distance,pointDistance)=>{if(distance>limit*limit)return;if(!best||distance<best.distance-1e-6||Math.abs(distance-best.distance)<1e-6&&pointDistance<best.pointDistance)best={col,r,distance,pointDistance}};
- for(const col of p.series){
-  const meta=columnMeta[col];if(!meta)continue;let previous=null;
-  for(const r of visible){
-   if(r.row._source!==meta.source)continue;
-   const x=point(r),y=num(r.row[col]);if(!Number.isFinite(x)||!Number.isFinite(y)){previous=null;continue}
-   const q={x:p.left+(x-p.xr[0])/(p.xr[1]-p.xr[0])*(p.right-p.left),y:p.bottom-(y-p.yr[0])/(p.yr[1]-p.yr[0])*(p.bottom-p.top),r};
-   const distance=(q.x-c.x)**2+(q.y-c.y)**2;
-   if(q.x>=p.left&&q.x<=p.right&&q.y>=p.top&&q.y<=p.bottom)consider(col,r,distance,distance);
-   if(previous&&$('style').value!=='scatter'){
-    const dx=q.x-previous.x,dy=q.y-previous.y,length=dx*dx+dy*dy,t=length?Math.max(0,Math.min(1,((c.x-previous.x)*dx+(c.y-previous.y)*dy)/length)):0;
-    const distanceToLine=(c.x-previous.x-t*dx)**2+(c.y-previous.y-t*dy)**2,near=t<=.5?previous:q;
-    consider(col,near.r,distanceToLine,(near.x-c.x)**2+(near.y-c.y)**2);
-   }
-   previous=q;
+update = function () {
+  const savedConditions = conditions; // Apply each condition only to its owning CSV.
+  const active = rows;
+  rows = active.filter((row) =>
+    savedConditions.every((f) => {
+      const meta = columnMeta[f.col];
+      if (!meta || meta.source !== row._source || (f.min === '' && f.max === '')) return true;
+      const v = num(row[f.col]);
+      return Number.isFinite(v) && (f.min === '' || v >= +f.min) && (f.max === '' || v <= +f.max);
+    }),
+  );
+  conditions = [];
+  try {
+    singleUpdate();
+  } finally {
+    rows = active;
+    conditions = savedConditions;
   }
- }
- return best;
+  $('total').textContent = rows.length.toLocaleString();
+  $('status').textContent =
+    `${csvSources.length}개 파일 · 조건 ${conditions.length}개 · ${rows.length - filtered.length}행 제외`;
+  if (conditions.some((f) => f.min !== '' && f.max !== '' && +f.min > +f.max))
+    $('status').textContent = '조건 오류: 최소값이 최대값보다 큽니다.';
+};
+$('x').onchange = () => {
+  const idx = +$('x').value,
+    meta = columnMeta[idx];
+  let fallback = [];
+  for (const s of csvSources) {
+    if (idx === -1) s.x = -1;
+    else {
+      const matching = s.head.findIndex(
+        (h, i) => h === csvSources[meta.source].head[meta.local] && s.numeric[i],
+      );
+      if (matching >= 0) s.x = matching;
+      else {
+        fallback.push(s.path);
+        s.x = s.numeric.indexOf(true);
+      }
+    }
+  }
+  view = null;
+  renderFileX();
+  update();
+  if (fallback.length)
+    showMultiWarning('같은 X열이 없는 파일은 첫 숫자 열 사용: ' + fallback.join(', '));
+};
+function renderFileX() {
+  const container = $('fileXList');
+  container.innerHTML = csvSources
+    .map(
+      (s, i) =>
+        `<label>${esc(sourceLabel(s))} · X축<select data-file-x="${i}"><option value="-1">행 번호</option>${s.head.map((h, k) => (s.numeric[k] ? `<option value="${k}" ${s.x === k ? 'selected' : ''}>${esc(h)}</option>` : '')).join('')}</select></label>`,
+    )
+    .join('');
+  container.querySelectorAll('[data-file-x]').forEach((el) => {
+    if (csvSources[+el.dataset.fileX].x === -1) el.value = '-1';
+    el.onchange = () => {
+      csvSources[+el.dataset.fileX].x = +el.value;
+      view = null;
+      update();
+    };
+  });
 }
-$('plot').onpointermove=e=>{
- if(drag)return priorPointerMove(e);
- const tip=$('tooltip'),c=coords(e),p=panelAt(c);if(!p||$('dimension').value==='3d'){tip.style.display='none';return}
- const hit=nearestHoveredSignal(c,p);if(!hit){tip.style.display='none';return}
- const meta=columnMeta[hit.col],source=csvSources[meta.source];
- tip.textContent=sourceLabel(source)+' / '+source.head[meta.local]+'\nX '+fmt(point(hit.r))+' · Y '+fmt(num(hit.r.row[hit.col]))+' · 데이터 행 '+(hit.r.row._localIndex+1)+'\n마우스에 가까운 원본 데이터 값';
- tip.style.display='block';const w=$('plot').clientWidth,h=$('plot').clientHeight;
- tip.style.left=Math.max(0,Math.min(c.x+14,w-tip.offsetWidth))+'px';tip.style.top=Math.max(0,Math.min(c.y+14,h-tip.offsetHeight))+'px';
+function renderLoadedSources() {
+  $('loadedCsvList').innerHTML =
+    csvSources
+      .map(
+        (s, i) =>
+          `<div class="loadedCsv"><span title="${esc(s.path)}">${esc(sourceLabel(s))}<small>${s.data.length}행 · ${s.head.length}열</small></span><button data-remove-source="${i}" title="불러온 목록에서 제외">×</button></div>`,
+      )
+      .join('') || '<p class="help">여러 CSV를 선택해 불러오세요.</p>';
+  $('loadedCsvList')
+    .querySelectorAll('[data-remove-source]')
+    .forEach(
+      (b) =>
+        (b.onclick = () => {
+          const refs = [...selected].map(columnRef).filter(Boolean);
+          csvSources.splice(+b.dataset.removeSource, 1);
+          rebuildSources(false);
+          if (!templatePending) {
+            selected = new Set(
+              refs.map(findColumn).filter((i) => i !== null && i >= 0 && numeric[i]),
+            );
+            renderColumns();
+            update();
+          }
+        }),
+    );
+}
+renderColumns = function () {
+  const q = $('search').value.toLowerCase();
+  $('columns').innerHTML = csvSources
+    .map((s, source) => {
+      const cols = s.head
+        .map((h, local) => {
+          const i = s.offset + local;
+          return (s.path + ' ' + h).toLowerCase().includes(q)
+            ? `<label><input type="checkbox" data-col="${i}" ${selected.has(i) ? 'checked' : ''} ${numeric[i] ? '' : 'disabled'}><span class="dot" style="background:${palette[i % 8]}"></span><span>${esc(h)}</span></label>`
+            : '';
+        })
+        .join('');
+      return cols
+        ? `<details class="sourceColumns" open><summary>${esc(sourceLabel(s))}</summary>${cols}</details>`
+        : '';
+    })
+    .join('');
+  $('selectedCount').textContent = selected.size + '개 선택';
+  $('columns')
+    .querySelectorAll('input')
+    .forEach(
+      (el) =>
+        (el.onchange = () => {
+          if (el.checked) {
+            if ($('selection').value === 'single') selected.clear();
+            selected.add(+el.dataset.col);
+          } else selected.delete(+el.dataset.col);
+          view = null;
+          renderColumns();
+          update();
+        }),
+    );
+};
+// Templates store paths and column names, never transient combined column indexes.
+captureTemplate = function () {
+  const v = singleCapture();
+  v.multiFileVersion = 1;
+  v.selected = [...selected].map(columnRef);
+  v.conditions = conditions.map((f) => ({ axis: columnRef(f.col), min: f.min, max: f.max }));
+  v.fileX = csvSources.map((s) => ({
+    file: s.path,
+    axis: s.x === -1 ? { row: true } : sourceColumnRef(s, s.x),
+  }));
+  v.files = csvSources.map((s) => s.path);
+  return v;
+};
+applyTemplate = function (v) {
+  const missing = [];
+  for (const ref of [v.x, v.y, v.z, v.t, ...v.selected, ...v.conditions.map((f) => f.axis)])
+    if (ref && !ref.row && findColumn(ref) === null)
+      missing.push(ref.file ? ref.file + ' / ' + ref.column : ref.name);
+  for (const entry of v.fileX || []) {
+    const s = csvSources.find((s) => s.path === entry.file);
+    if (!s) {
+      missing.push(entry.file);
+      continue;
+    }
+    if (entry.axis?.row) s.x = -1;
+    else {
+      const global = findColumn(entry.axis);
+      if (global !== null) s.x = columnMeta[global].local;
+      else missing.push(entry.file + ' / ' + entry.axis?.column);
+    }
+  }
+  singleApplyTemplate(v);
+  if (v.dimension === '3d') {
+    for (const [id, ref] of [
+      ['x', v.x],
+      ['yaxis3', v.y],
+      ['zaxis', v.z],
+    ]) {
+      if (ref && !ref.row && findColumn(ref) === null) {
+        if (![...$(id).options].some((o) => o.value === '-2'))
+          $(id).insertAdjacentHTML('beforeend', '<option value="-2">양식의 열 없음</option>');
+        $(id).value = '-2';
+      }
+    }
+    draw();
+  }
+  renderFileX();
+  const unique = [...new Set(missing)].filter(Boolean);
+  showMultiWarning(
+    unique.length
+      ? '양식에서 찾지 못한 항목 ' +
+          unique.length +
+          '개 · ' +
+          unique.slice(0, 3).join(', ') +
+          (unique.length > 3 ? ' …' : '')
+      : '',
+  );
+};
+// Batch selection in the workspace browser, with files added to the current plot.
+const batch = document.createElement('div');
+batch.className = 'csvBatchActions';
+batch.innerHTML =
+  '<button id="checkAllCsv">전체 체크</button><button id="uncheckCsv">해제</button><button id="loadCheckedCsv" class="solid">선택 CSV 함께 열기</button>';
+csvPanel.insertBefore(batch, $('workspaceCsvList'));
+let checkedCsvPaths = new Set();
+renderWorkspaceCsv = function () {
+  const q = $('workspaceCsvSearch').value.toLowerCase();
+  $('workspaceCsvList').innerHTML =
+    workspaceCsv
+      .map((f, i) =>
+        f.path.toLowerCase().includes(q)
+          ? `<div class="workspaceCsvRow"><input type="checkbox" data-check-csv="${i}" ${checkedCsvPaths.has(f.path) ? 'checked' : ''} aria-label="${esc(f.path)} 선택"><button class="workspaceCsvItem" data-add-csv="${i}">${esc(f.path)}</button></div>`
+          : '',
+      )
+      .join('') || '<p class="help">표시할 CSV가 없습니다.</p>';
+  $('workspaceCsvList')
+    .querySelectorAll('[data-check-csv]')
+    .forEach(
+      (c) =>
+        (c.onchange = () => {
+          const path = workspaceCsv[+c.dataset.checkCsv].path;
+          if (c.checked) checkedCsvPaths.add(path);
+          else checkedCsvPaths.delete(path);
+        }),
+    );
+  $('workspaceCsvList')
+    .querySelectorAll('[data-add-csv]')
+    .forEach((b) => (b.onclick = () => addSourceFiles([workspaceCsv[+b.dataset.addCsv]])));
+};
+$('checkAllCsv').onclick = () => {
+  const q = $('workspaceCsvSearch').value.toLowerCase();
+  workspaceCsv
+    .filter((f) => f.path.toLowerCase().includes(q))
+    .forEach((f) => checkedCsvPaths.add(f.path));
+  renderWorkspaceCsv();
+};
+$('uncheckCsv').onclick = () => {
+  checkedCsvPaths.clear();
+  renderWorkspaceCsv();
+};
+$('loadCheckedCsv').onclick = () => {
+  const entries = workspaceCsv.filter((f) => checkedCsvPaths.has(f.path));
+  if (!entries.length) return notice('CSV 파일을 체크하세요.');
+  void addSourceFiles(entries);
+};
+const loadedPanel = document.createElement('section');
+loadedPanel.id = 'loadedCsvPanel';
+loadedPanel.innerHTML =
+  '<div class="panelhead">불러온 CSV</div><div id="loadedCsvList"></div><button id="clearLoadedCsv">불러온 파일 모두 닫기</button>';
+dataPanel.append(loadedPanel);
+$('clearLoadedCsv').onclick = () => {
+  multiReadSequence++;
+  csvSources = [];
+  templatePending = null;
+  rebuildSources(false);
+  showMultiWarning('');
+};
+const fileX = document.createElement('section');
+fileX.className = 'fileXSection';
+fileX.innerHTML =
+  '<div class="panelhead">파일별 X축</div><p class="help">각 신호는 해당 파일의 X열로 그립니다. 여러 파일을 같은 그래프에 겹치거나 신호별로 나눠 볼 수 있습니다.</p><div id="fileXList"></div>';
+graphSections.axes.panel.append(fileX);
+const warning = document.createElement('div');
+warning.id = 'multiWarning';
+warning.hidden = true;
+warning.setAttribute('role', 'status');
+document.querySelector('.content').prepend(warning);
+const axisReset = document.createElement('button');
+axisReset.id = 'resetAxisValues';
+axisReset.className = 'outline';
+axisReset.textContent = '축 값 초기화';
+$('applybounds').after(axisReset);
+axisReset.onclick = () => {
+  view = null;
+  manualY = null;
+  for (const id of ['xmin', 'xmax', 'ymin', 'ymax']) $(id).value = '';
+  draw();
+};
+// Keep an opened workspace's data distinct when changing to another root.
+const previousActivateWorkspace = activateWorkspace;
+activateWorkspace = async function (root) {
+  await previousActivateWorkspace(root);
+  multiReadSequence++;
+  checkedCsvPaths.clear();
+  csvSources = [];
+  rebuildSources(false);
+  renderWorkspaceCsv();
+  showMultiWarning('');
+};
+renderLoadedSources();
+renderFileX();
+seriesRows = function (col) {
+  const meta = columnMeta[col];
+  return meta ? filtered.filter((r) => r.row._source === meta.source) : filtered;
+};
+// Sorting by T must not interleave unrelated files into a broken 2D line.
+ordered = function () {
+  const ti = +$('taxis').value,
+    ref = columnMeta[ti];
+  return filtered
+    .map((r) => {
+      const s = csvSources[r.row._source];
+      let local = -1;
+      if (ref) {
+        const ts = csvSources[ref.source],
+          same = s.head.map((h, i) => (h === ts.head[ref.local] ? i : -1)).filter((i) => i >= 0);
+        const occurrence = ts.head
+          .slice(0, ref.local)
+          .filter((h) => h === ts.head[ref.local]).length;
+        local = same[occurrence] ?? -1;
+      }
+      return {
+        r,
+        t: ti === -1 || local < 0 ? r.row._localIndex + 1 : num(r.row[s.offset + local]),
+      };
+    })
+    .filter((o) => Number.isFinite(o.t))
+    .filter(
+      (o) =>
+        $('dimension').value !== '3d' ||
+        !columnMeta[+$('x').value] ||
+        o.r.row._source === columnMeta[+$('x').value].source,
+    )
+    .sort((a, b) => a.t - b.t || a.r.row._localIndex - b.r.row._localIndex);
+};
+const priorPointerMove = $('plot').onpointermove;
+function nearestHoveredSignal(c, p) {
+  const limit = Math.max(10, viewerPrefs.lineWidth + 5, viewerPrefs.pointSize + 5),
+    visible = previewVisibleRows();
+  let best = null;
+  const consider = (col, r, distance, pointDistance) => {
+    if (distance > limit * limit) return;
+    if (
+      !best ||
+      distance < best.distance - 1e-6 ||
+      (Math.abs(distance - best.distance) < 1e-6 && pointDistance < best.pointDistance)
+    )
+      best = { col, r, distance, pointDistance };
+  };
+  for (const col of p.series) {
+    const meta = columnMeta[col];
+    if (!meta) continue;
+    let previous = null;
+    for (const r of visible) {
+      if (r.row._source !== meta.source) continue;
+      const x = point(r),
+        y = num(r.row[col]);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        previous = null;
+        continue;
+      }
+      const q = {
+        x: p.left + ((x - p.xr[0]) / (p.xr[1] - p.xr[0])) * (p.right - p.left),
+        y: p.bottom - ((y - p.yr[0]) / (p.yr[1] - p.yr[0])) * (p.bottom - p.top),
+        r,
+      };
+      const distance = (q.x - c.x) ** 2 + (q.y - c.y) ** 2;
+      if (q.x >= p.left && q.x <= p.right && q.y >= p.top && q.y <= p.bottom)
+        consider(col, r, distance, distance);
+      if (previous && $('style').value !== 'scatter') {
+        const dx = q.x - previous.x,
+          dy = q.y - previous.y,
+          length = dx * dx + dy * dy,
+          t = length
+            ? Math.max(0, Math.min(1, ((c.x - previous.x) * dx + (c.y - previous.y) * dy) / length))
+            : 0;
+        const distanceToLine = (c.x - previous.x - t * dx) ** 2 + (c.y - previous.y - t * dy) ** 2,
+          near = t <= 0.5 ? previous : q;
+        consider(col, near.r, distanceToLine, (near.x - c.x) ** 2 + (near.y - c.y) ** 2);
+      }
+      previous = q;
+    }
+  }
+  return best;
+}
+$('plot').onpointermove = (e) => {
+  if (drag) return priorPointerMove(e);
+  const tip = $('tooltip'),
+    c = coords(e),
+    p = panelAt(c);
+  if (!p || $('dimension').value === '3d') {
+    tip.style.display = 'none';
+    return;
+  }
+  const hit = nearestHoveredSignal(c, p);
+  if (!hit) {
+    tip.style.display = 'none';
+    return;
+  }
+  const meta = columnMeta[hit.col],
+    source = csvSources[meta.source];
+  tip.textContent =
+    sourceLabel(source) +
+    ' / ' +
+    source.head[meta.local] +
+    '\nX ' +
+    fmt(point(hit.r)) +
+    ' · Y ' +
+    fmt(num(hit.r.row[hit.col])) +
+    ' · 데이터 행 ' +
+    (hit.r.row._localIndex + 1) +
+    '\n마우스에 가까운 원본 데이터 값';
+  tip.style.display = 'block';
+  const w = $('plot').clientWidth,
+    h = $('plot').clientHeight;
+  tip.style.left = Math.max(0, Math.min(c.x + 14, w - tip.offsetWidth)) + 'px';
+  tip.style.top = Math.max(0, Math.min(c.y + 14, h - tip.offsetHeight)) + 'px';
 };
 
-$('open').querySelector('span:not(.ui-icon)').textContent='CSV 여러 개 추가';$('x').previousElementSibling.textContent='공통 X열 (동일한 열 이름으로 연결)';
+$('open').querySelector('span:not(.ui-icon)').textContent = 'CSV 여러 개 추가';
+$('x').previousElementSibling.textContent = '공통 X열 (동일한 열 이름으로 연결)';
