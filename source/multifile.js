@@ -87,12 +87,14 @@ function rebuildSources(preserve = true) {
       rows.push(row);
     }
   });
+  window.installConditionalSignals?.();
   selected = new Set(prior.map(findColumn).filter((i) => i !== null && i >= 0 && numeric[i]));
   if (!selected.size)
     csvSources.forEach((s) => {
       const local = s.numeric.findIndex((v, i) => v && i !== s.x);
       if (local >= 0) selected.add(s.offset + local);
     });
+  window.selectConditionalSignals?.(prior);
   if ($('selection').value === 'single' && selected.size > 1)
     selected = new Set([[...selected][0]]);
   conditions = [];
@@ -102,7 +104,11 @@ function rebuildSources(preserve = true) {
   $('x').innerHTML =
     '<option value="-1">각 파일 행 번호</option>' +
     headers
-      .map((h, i) => `<option value="${i}">${esc(h)}${numeric[i] ? '' : ' (문자)'}</option>`)
+      .map((h, i) =>
+        window.isConditionalSignalIndex?.(i)
+          ? ''
+          : `<option value="${i}">${esc(h)}${numeric[i] ? '' : ' (문자)'}</option>`,
+      )
       .join('');
   $('x').value = String(
     findColumn(oldX) ?? (csvSources[0] ? csvSources[0].offset + csvSources[0].x : -1),
@@ -187,7 +193,8 @@ async function addSourceFiles(entries) {
     for (const s of pending) {
       const source = csvSources.find((v) => v.path === s.path),
         local = source.numeric.findIndex((v, i) => v && i !== source.x);
-      if (local >= 0) ids.push(source.offset + local);
+      if (local >= 0 && !window.hasConditionalSignalsForFile?.(source.path))
+        ids.push(source.offset + local);
     }
     selected = new Set(ids);
     if ($('selection').value === 'single' && selected.size > 1)
@@ -551,7 +558,7 @@ function nearestHoveredSignal(c, p) {
     if (!meta) continue;
     let previous = null;
     for (const r of visible) {
-      if (r.row._source !== meta.source) continue;
+      if (r.row._source !== meta.source || (meta.acceptRow && !meta.acceptRow(r.row))) continue;
       const x = point(r),
         y = num(r.row[col]);
       if (!Number.isFinite(x) || !Number.isFinite(y)) {
@@ -599,9 +606,7 @@ $('plot').onpointermove = (e) => {
   const meta = columnMeta[hit.col],
     source = csvSources[meta.source];
   tip.textContent =
-    sourceLabel(source) +
-    ' / ' +
-    source.head[meta.local] +
+    (meta.signalId ? headers[hit.col] : sourceLabel(source) + ' / ' + source.head[meta.local]) +
     '\nX ' +
     fmt(point(hit.r)) +
     ' · Y ' +

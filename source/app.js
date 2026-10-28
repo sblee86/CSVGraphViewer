@@ -179,7 +179,7 @@ function renderFilters() {
   $('filters').innerHTML = conditions
     .map(
       (f, j) =>
-        `<div class="filter"><select data-f="${j}">${headers.map((h, i) => (numeric[i] ? `<option value="${i}" ${f.col === i ? 'selected' : ''}>${esc(h)}</option>` : '')).join('')}</select><button data-del="${j}" title="조건 삭제">×</button><div class="row"><input type="number" step="any" data-min="${j}" placeholder="최소 (포함)" value="${f.min}"><span>~</span><input type="number" step="any" data-max="${j}" placeholder="최대 (포함)" value="${f.max}"></div></div>`,
+        `<div class="filter"><select data-f="${j}">${headers.map((h, i) => (numeric[i] && !window.isConditionalSignalIndex?.(i) ? `<option value="${i}" ${f.col === i ? 'selected' : ''}>${esc(h)}</option>` : '')).join('')}</select><button data-del="${j}" title="조건 삭제">×</button><div class="row"><input type="number" step="any" data-min="${j}" placeholder="최소 (포함)" value="${f.min}"><span>~</span><input type="number" step="any" data-max="${j}" placeholder="최대 (포함)" value="${f.max}"></div></div>`,
     )
     .join('');
   $('filters')

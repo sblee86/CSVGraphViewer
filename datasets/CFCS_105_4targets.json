@@ -1,0 +1,167 @@
+{
+  "format": "atelier-csv-scope",
+  "version": 1,
+  "name": "CFCS105 - 표적별 Range 비교",
+  "dimension": "2d",
+  "x": {
+    "file": "CFCS_105.csv",
+    "column": "Time_s",
+    "occurrence": 0
+  },
+  "y": {
+    "file": "CFCS_105.csv",
+    "column": "Y_m",
+    "occurrence": 0
+  },
+  "z": {
+    "file": "CFCS_105.csv",
+    "column": "Z_m",
+    "occurrence": 0
+  },
+  "t": {
+    "file": "CFCS_105.csv",
+    "column": "Time_s",
+    "occurrence": 0
+  },
+  "selected": [
+    {
+      "file": "CFCS_105.csv",
+      "column": "Range_m",
+      "occurrence": 0,
+      "signalId": "cfcs105-range-1001"
+    },
+    {
+      "file": "CFCS_105.csv",
+      "column": "Range_m",
+      "occurrence": 0,
+      "signalId": "cfcs105-range-1002"
+    },
+    {
+      "file": "CFCS_105.csv",
+      "column": "Range_m",
+      "occurrence": 0,
+      "signalId": "cfcs105-range-1003"
+    },
+    {
+      "file": "CFCS_105.csv",
+      "column": "Range_m",
+      "occurrence": 0,
+      "signalId": "cfcs105-range-1004"
+    }
+  ],
+  "selection": "multi",
+  "layout": "overlay",
+  "style": "line",
+  "timeMode": "all",
+  "timeIndex": 0,
+  "conditions": [],
+  "bounds": {
+    "x": null,
+    "y": null
+  },
+  "camera": {
+    "yaw": 0.65,
+    "pitch": 0.45,
+    "scale": 1,
+    "offset": [
+      0,
+      0
+    ]
+  },
+  "files": [
+    "CFCS_105.csv"
+  ],
+  "fileX": [
+    {
+      "file": "CFCS_105.csv",
+      "axis": {
+        "file": "CFCS_105.csv",
+        "column": "Time_s",
+        "occurrence": 0
+      }
+    }
+  ],
+  "multiFileVersion": 1,
+  "conditionalSignals": [
+    {
+      "id": "cfcs105-range-1001",
+      "axis": {
+        "file": "CFCS_105.csv",
+        "column": "Range_m",
+        "occurrence": 0
+      },
+      "enabled": true,
+      "conditions": [
+        {
+          "axis": {
+            "file": "CFCS_105.csv",
+            "column": "Target_ID",
+            "occurrence": 0
+          },
+          "operator": "eq",
+          "value": "1001"
+        }
+      ]
+    },
+    {
+      "id": "cfcs105-range-1002",
+      "axis": {
+        "file": "CFCS_105.csv",
+        "column": "Range_m",
+        "occurrence": 0
+      },
+      "enabled": true,
+      "conditions": [
+        {
+          "axis": {
+            "file": "CFCS_105.csv",
+            "column": "Target_ID",
+            "occurrence": 0
+          },
+          "operator": "eq",
+          "value": "1002"
+        }
+      ]
+    },
+    {
+      "id": "cfcs105-range-1003",
+      "axis": {
+        "file": "CFCS_105.csv",
+        "column": "Range_m",
+        "occurrence": 0
+      },
+      "enabled": true,
+      "conditions": [
+        {
+          "axis": {
+            "file": "CFCS_105.csv",
+            "column": "Target_ID",
+            "occurrence": 0
+          },
+          "operator": "eq",
+          "value": "1003"
+        }
+      ]
+    },
+    {
+      "id": "cfcs105-range-1004",
+      "axis": {
+        "file": "CFCS_105.csv",
+        "column": "Range_m",
+        "occurrence": 0
+      },
+      "enabled": true,
+      "conditions": [
+        {
+          "axis": {
+            "file": "CFCS_105.csv",
+            "column": "Target_ID",
+            "occurrence": 0
+          },
+          "operator": "eq",
+          "value": "1004"
+        }
+      ]
+    }
+  ]
+}

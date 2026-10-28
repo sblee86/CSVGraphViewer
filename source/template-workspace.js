@@ -9,6 +9,10 @@ function templateFilePaths(v) {
     ...v.selected,
     ...v.conditions.map((f) => f.axis),
     ...(v.fileX || []).map((f) => f.axis),
+    ...(v.conditionalSignals || []).flatMap((signal) => [
+      signal.axis,
+      ...(signal.conditions || []).map((c) => c.axis),
+    ]),
   ];
   return [
     ...new Set(
@@ -88,6 +92,10 @@ async function openWorkspaceTemplate(input) {
     for (const f of v.fileX || []) {
       f.file = resolved.get(f.file) || f.file;
       remap(f.axis);
+    }
+    for (const signal of v.conditionalSignals || []) {
+      remap(signal.axis);
+      for (const condition of signal.conditions || []) remap(condition.axis);
     }
     v.files = paths.map((p) => resolved.get(p));
     multiReadSequence++;

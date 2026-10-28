@@ -2295,6 +2295,84 @@ header .local.buildLabel {
   font-size: 11px;
   color: var(--text);
 }
+#conditionalSignalsPanel {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.conditionalAdd {
+  display: grid;
+  gap: 8px;
+}
+.conditionalAdd select {
+  width: 100%;
+}
+.conditionalSignalCard {
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid var(--accent);
+  border-radius: 7px;
+  background: var(--soft);
+}
+.conditionalCardHeading,
+.conditionalCardActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.conditionalCardHeading label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-right: auto;
+}
+.conditionalSignalCard > small {
+  display: block;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+  margin: 8px 0;
+}
+.conditionalSignalCard > label {
+  display: grid;
+  gap: 4px;
+}
+.conditionalSignalCard select,
+.conditionalSignalCard input {
+  min-width: 0;
+  width: 100%;
+  padding: 6px;
+}
+.conditionalSignalCard input[type='checkbox'] {
+  width: auto;
+}
+.signalCondition {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 65px;
+  gap: 5px;
+  margin: 9px 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+.signalCondition input {
+  grid-column: 1;
+}
+.signalCondition button {
+  grid-column: 2;
+}
+.signalConditionError {
+  color: #c0392b;
+  font-size: 11px;
+  margin: 6px 0;
+}
+.signalQuickCondition {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 3px 6px !important;
+  border: 1px solid var(--line);
+  font-size: 10px !important;
+  color: var(--accent);
+}
 
 </style>
   <body>
@@ -2803,7 +2881,7 @@ function renderFilters() {
   $('filters').innerHTML = conditions
     .map(
       (f, j) =>
-        `<div class="filter"><select data-f="${j}">${headers.map((h, i) => (numeric[i] ? `<option value="${i}" ${f.col === i ? 'selected' : ''}>${esc(h)}</option>` : '')).join('')}</select><button data-del="${j}" title="조건 삭제">×</button><div class="row"><input type="number" step="any" data-min="${j}" placeholder="최소 (포함)" value="${f.min}"><span>~</span><input type="number" step="any" data-max="${j}" placeholder="최대 (포함)" value="${f.max}"></div></div>`,
+        `<div class="filter"><select data-f="${j}">${headers.map((h, i) => (numeric[i] && !window.isConditionalSignalIndex?.(i) ? `<option value="${i}" ${f.col === i ? 'selected' : ''}>${esc(h)}</option>` : '')).join('')}</select><button data-del="${j}" title="조건 삭제">×</button><div class="row"><input type="number" step="any" data-min="${j}" placeholder="최소 (포함)" value="${f.min}"><span>~</span><input type="number" step="any" data-max="${j}" placeholder="최대 (포함)" value="${f.max}"></div></div>`,
     )
     .join('');
   $('filters')
@@ -3379,10 +3457,18 @@ function axisOptions() {
     let prev = $(id).value;
     $(id).innerHTML =
       (id === 'taxis' ? '<option value="-1">행 순서</option>' : '') +
-      headers.map((h, i) => (numeric[i] ? `<option value="${i}">${esc(h)}</option>` : '')).join('');
+      headers
+        .map((h, i) =>
+          numeric[i] && !window.isConditionalSignalIndex?.(i)
+            ? `<option value="${i}">${esc(h)}</option>`
+            : '',
+        )
+        .join('');
     if ([...$(id).options].some((o) => o.value === prev)) $(id).value = prev;
   }
-  let nums = numeric.map((v, i) => (v ? i : -1)).filter((i) => i >= 0);
+  let nums = numeric
+    .map((v, i) => (v && !window.isConditionalSignalIndex?.(i) ? i : -1))
+    .filter((i) => i >= 0);
   $('yaxis3').value = String(nums[1] ?? nums[0] ?? '');
   $('zaxis').value = String(nums[2] ?? nums[0] ?? '');
   $('taxis').value = '-1';
@@ -4754,12 +4840,14 @@ function rebuildSources(preserve = true) {
       rows.push(row);
     }
   });
+  window.installConditionalSignals?.();
   selected = new Set(prior.map(findColumn).filter((i) => i !== null && i >= 0 && numeric[i]));
   if (!selected.size)
     csvSources.forEach((s) => {
       const local = s.numeric.findIndex((v, i) => v && i !== s.x);
       if (local >= 0) selected.add(s.offset + local);
     });
+  window.selectConditionalSignals?.(prior);
   if ($('selection').value === 'single' && selected.size > 1)
     selected = new Set([[...selected][0]]);
   conditions = [];
@@ -4769,7 +4857,11 @@ function rebuildSources(preserve = true) {
   $('x').innerHTML =
     '<option value="-1">각 파일 행 번호</option>' +
     headers
-      .map((h, i) => `<option value="${i}">${esc(h)}${numeric[i] ? '' : ' (문자)'}</option>`)
+      .map((h, i) =>
+        window.isConditionalSignalIndex?.(i)
+          ? ''
+          : `<option value="${i}">${esc(h)}${numeric[i] ? '' : ' (문자)'}</option>`,
+      )
       .join('');
   $('x').value = String(
     findColumn(oldX) ?? (csvSources[0] ? csvSources[0].offset + csvSources[0].x : -1),
@@ -4854,7 +4946,8 @@ async function addSourceFiles(entries) {
     for (const s of pending) {
       const source = csvSources.find((v) => v.path === s.path),
         local = source.numeric.findIndex((v, i) => v && i !== source.x);
-      if (local >= 0) ids.push(source.offset + local);
+      if (local >= 0 && !window.hasConditionalSignalsForFile?.(source.path))
+        ids.push(source.offset + local);
     }
     selected = new Set(ids);
     if ($('selection').value === 'single' && selected.size > 1)
@@ -5218,7 +5311,7 @@ function nearestHoveredSignal(c, p) {
     if (!meta) continue;
     let previous = null;
     for (const r of visible) {
-      if (r.row._source !== meta.source) continue;
+      if (r.row._source !== meta.source || (meta.acceptRow && !meta.acceptRow(r.row))) continue;
       const x = point(r),
         y = num(r.row[col]);
       if (!Number.isFinite(x) || !Number.isFinite(y)) {
@@ -5266,9 +5359,7 @@ $('plot').onpointermove = (e) => {
   const meta = columnMeta[hit.col],
     source = csvSources[meta.source];
   tip.textContent =
-    sourceLabel(source) +
-    ' / ' +
-    source.head[meta.local] +
+    (meta.signalId ? headers[hit.col] : sourceLabel(source) + ' / ' + source.head[meta.local]) +
     '\nX ' +
     fmt(point(hit.r)) +
     ' · Y ' +
@@ -5800,6 +5891,10 @@ function templateFilePaths(v) {
     ...v.selected,
     ...v.conditions.map((f) => f.axis),
     ...(v.fileX || []).map((f) => f.axis),
+    ...(v.conditionalSignals || []).flatMap((signal) => [
+      signal.axis,
+      ...(signal.conditions || []).map((c) => c.axis),
+    ]),
   ];
   return [
     ...new Set(
@@ -5879,6 +5974,10 @@ async function openWorkspaceTemplate(input) {
     for (const f of v.fileX || []) {
       f.file = resolved.get(f.file) || f.file;
       remap(f.axis);
+    }
+    for (const signal of v.conditionalSignals || []) {
+      remap(signal.axis);
+      for (const condition of signal.conditions || []) remap(condition.axis);
     }
     v.files = paths.map((p) => resolved.get(p));
     multiReadSequence++;
@@ -6133,12 +6232,15 @@ download = function (blob, name, root = workRoot) {
 };
 $('export').onclick = () => {
   if (!rows.length) return notice('CSV 파일을 먼저 불러오세요.');
+  const exportColumns = headers
+    .map((_, index) => index)
+    .filter((index) => !columnMeta[index]?.signalId);
   void download(
     new Blob(
       [
         serializeCSV(
-          headers,
-          filtered.map((r) => r.row),
+          exportColumns.map((index) => headers[index]),
+          filtered.map((r) => exportColumns.map((index) => r.row[index])),
         ),
       ],
       { type: 'text/csv;charset=utf-8' },
@@ -6167,7 +6269,7 @@ helpDialog.setAttribute('aria-labelledby', 'viewerHelpTitle');
 helpDialog.innerHTML = `<div class="helpTitle"><h2 id="viewerHelpTitle">CSVGraphViewer 사용법</h2><button id="viewerHelpClose" aria-label="도움말 닫기">닫기 ×</button></div>
 <section><h3>1. 시작 · 데이터 탭</h3><p>데스크톱 Chrome 또는 Edge에서 작업폴더를 선택하고 읽기·쓰기 권한을 허용하세요. CSV/TSV의 첫 행은 열 이름입니다. 작업폴더와 하위폴더의 파일을 클릭하거나 체크한 뒤 ‘선택 CSV 함께 열기’를 누릅니다. ‘CSV 여러 개 추가’로 외부 파일도 열 수 있습니다.</p><p>한글이 깨지면 문자 인코딩을 CP949 / EUC-KR로 바꾸세요. 구분자는 자동 감지 또는 쉼표·세미콜론·탭을 지정합니다. 외부에서 파일을 바꾼 뒤에는 목록 새로고침을 누르세요. 열린 파일의 ×는 원본 삭제가 아니라 화면에서 제외하는 기능입니다.</p></section>
 <section><h3>2. 그래프설정 → 그래프 종류</h3><p>2D는 여러 파일의 신호를 겹치거나 신호별로 나누어 비교합니다. 선·산점도·선+점을 선택할 수 있습니다. 3D는 같은 CSV의 X·Y·Z 좌표를 궤적으로 표시하며 각 축을 데이터 범위로 정규화합니다. T는 숫자 시간 열 또는 행 순서입니다. 시간 표시를 ‘현재 T까지’로 바꾸고 슬라이더나 재생을 사용하세요.</p></section>
-<section><h3>3. 그래프설정 → 축 설정</h3><p>2D에서는 X열과 Y신호 체크박스를 선택합니다. 여러 파일은 각 파일의 X열을 사용하며 파일별 X축에서 따로 지정할 수 있습니다. 파일 사이 행을 합치거나 시간을 자동 보간하지 않습니다. 2D에서는 3D용 Y·Z 좌표 선택을 숨깁니다. 3D로 바꾸면 X·Y·Z 좌표 선택이 나타나고 2D Y신호 목록은 숨깁니다. 3D는 한 파일의 X·Y·Z를 선택하세요. 열 이름은 CSV 첫 행을 기준으로 연결합니다.</p></section>
+<section><h3>3. 그래프설정 → 축 설정</h3><p>2D에서는 X열과 Y신호 체크박스를 선택합니다. 여러 파일은 각 파일의 X열을 사용하며 파일별 X축에서 따로 지정할 수 있습니다. 파일 사이 행을 합치거나 시간을 자동 보간하지 않습니다. 같은 CSV에서 표적별로 나누려면 Y열 옆 조건 버튼 또는 조건별 Y신호를 사용하세요. 예: Range_m에 Target_ID=1001 조건을 적용하고 복제하여 1002로 바꾸면 두 선을 별도로 그립니다. 여러 조건은 AND이며 적용 버튼으로 갱신하고 양식에도 저장합니다. 파일 공통 조건은 모든 신호에, 조건별 Y신호는 그 신호에만 적용합니다. 2D에서는 3D용 Y·Z 좌표 선택을 숨깁니다. 3D로 바꾸면 X·Y·Z 좌표 선택이 나타나고 2D Y신호 목록은 숨깁니다. 3D는 한 파일의 X·Y·Z를 선택하세요. 열 이름은 CSV 첫 행을 기준으로 연결합니다.</p></section>
 <section><h3>4. 그래프설정 → 스케일·값 범위</h3><p>조건 필터는 열의 최소·최대에 해당하는 행만 남기며 여러 조건은 AND로 적용합니다. 여러 CSV에서는 해당 열이 속한 파일에만 적용합니다. X/Y 표시 범위를 입력한 뒤 ‘사용자 축 설정 적용’을 누르세요(2D). ‘축 범위 자동’은 자동 보기로 복원하며 입력한 사용자 범위와 조건은 유지합니다.</p></section>
 <section><h3>5. 메인 그래프 조작</h3><p>‘축 범위 자동’ 왼쪽의 ‘신호별 개별 보기’를 체크하면 신호별 그래프로 나뉘고, 해제하면 한 그래프에 겹칩니다. 그래프설정의 배치와 양식 설정에 함께 반영됩니다. 이 기능은 2D에서 사용합니다.</p><p>‘확대’는 왼쪽 드래그로 영역을 확대하고 ‘이동’은 왼쪽 드래그로 화면을 이동합니다. 가운데 버튼 드래그는 항상 이동, 휠은 확대·축소, 더블클릭은 초기 보기입니다. 우측 상단 전체보기는 저장 파일 목록을 엽니다. 3D에서 왼쪽 드래그는 회전입니다. 우클릭 메뉴로 그래프 설정에 바로 갈 수 있습니다. 2D 그래프의 선이나 점에 마우스를 가까이 대면 가장 가까운 신호 하나의 원본 X·Y값과 행 번호만 표시합니다. 빈 영역에서는 숨깁니다. 선 사이 구간에서도 값을 보간하지 않고 가까운 원본 레코드를 표시합니다.</p><p>전체 행은 열린 CSV의 총 레코드 수, 조건 통과 행은 그래프 조건을 통과한 수, 선택 신호는 Y신호 수입니다. X축 보기 범위는 현재 표시하는 최소·최대 X값이며 시간 재생이나 CSV 저장 행 수를 뜻하지 않습니다. 여러 파일은 각 파일의 X열 값을 공통 표시 범위에서 그립니다.</p></section>
 <section><h3>6. 양식 탭</h3><p>원하는 파일·열·그래프 설정 후 이름을 적고 양식을 저장하세요. JSON은 작업폴더/양식/에 저장하며 CSV 자체는 포함하지 않습니다. 양식을 클릭하면 현재 작업폴더에서 상대 경로 또는 유일한 파일명으로 CSV를 찾아 열 이름에 맞추어 그래프를 복원합니다. 중복 파일명이나 없는 파일·열은 안내합니다.</p><p>가져오기는 외부 양식을 작업폴더에 복사합니다. 목록 새로고침으로 변경을 읽으세요. 체크박스와 ‘선택 삭제’는 선택한 양식 JSON을 실제로 삭제합니다. ‘양식 해제’는 저장 파일을 유지하고 현재 적용을 취소하여 기본 2D 분석을 시작합니다.</p></section>
@@ -6517,9 +6619,9 @@ $('reset').title = '내보내기 폴더의 PNG·CSV 저장 파일 목록과 미�
 </script>
     <script>
 window.CSV_GRAPH_BUILD = {
-  "version": "1.0.16",
-  "built_at": "2026-10-28T14:50:46+09:00",
-  "source_hash": "4c430628e96ee7393754c894b89364641474b6e74bbd48c18f8bf41ccb206577"
+  "version": "1.0.20",
+  "built_at": "2026-10-28T23:28:10+09:00",
+  "source_hash": "87a3e730fa690cd4c871e05a8881840aa00de304c263bd28013fc793efae774a"
 };
 
 </script>
@@ -6784,7 +6886,7 @@ axisHelp.innerHTML = `<header id="axisHelpDrag" tabindex="0" title="드래그 �
 <h3>예시 CSV — 첫 행은 열 이름</h3><table><thead><tr><th>Time_s</th><th>X_m</th><th>Y_m</th><th>Z_m</th><th>Speed</th></tr></thead><tbody><tr><td>0</td><td>1</td><td>2</td><td>0</td><td>10</td></tr><tr><td>1</td><td>2</td><td>4</td><td>1</td><td>12</td></tr><tr><td>2</td><td>3</td><td>3</td><td>2</td><td>15</td></tr></tbody></table>
 <h3>X축 — 가로 기준</h3><p>2D에서 X=Time_s, Y신호=Speed를 선택하면 시간 0·1·2초에 속도 10·12·15가 표시됩니다. X축을 X_m으로 바꾸면 같은 속도값을 위치 1·2·3에 대응해 그립니다. 행 번호를 고르면 X는 첫 번째 데이터부터 1·2·3입니다.</p><p>여러 CSV는 각각 자기 파일의 X열로 그립니다. 공통 X열은 같은 열 이름으로 연결하며, 파일별 X축에서 따로 선택할 수 있습니다. 없는 X열은 첫 숫자 열을 사용하고 경고합니다. CSV끼리 행을 합치거나 시간을 보간하지 않습니다.</p>
 <h3>Y신호 — 2D에서 비교할 값</h3><p>Y신호 체크박스는 세로축으로 그릴 열입니다. Speed만 체크하면 속도 하나, Speed와 Y_m을 함께 체크하면 두 신호를 비교합니다. 신호별 개별 보기를 켜면 각각 나누고, 끄면 겹칩니다. 단위가 다른 값은 개별 보기가 읽기 쉽습니다. 빈 숫자 셀은 0이 아니라 결측값으로 선이 끊깁니다.</p>
-<h3>X·Y·Z — 3D 공간 좌표</h3><p>3D에서는 같은 CSV의 X=X_m, Y=Y_m, Z=Z_m을 선택합니다. 예시에서는 (1,2,0) → (2,4,1) → (3,3,2)를 잇는 궤적입니다. 이 Y축은 2D의 복수 Y신호 체크 목록과 달리 좌표 열 하나입니다.</p><p>각 축은 해당 데이터 범위로 정규화합니다. X 1m와 Z 1m가 화면에서 같은 길이라는 뜻은 아닙니다. 3D 축 범위는 자동 계산하며 수동 X/Y 표시 범위 입력은 2D용입니다.</p>
+<h3>조건별 Y신호 — 표적마다 같은 열 나누기</h3><p>표적번호가 섞인 CSV에서는 Range_m의 조건 버튼을 누르거나 조건별 Y신호에서 Y열을 선택해 추가하세요. 조건 열=Target_ID, 연산자==, 값=1001로 적용하면 1001의 Range만 그립니다. 복제 후 값을 1002로 바꾸면 두 표적을 겹치거나 개별 그래프로 비교할 수 있습니다.</p><p>조건 추가로 Detection=1, Speed_mps≥20 등을 함께 걸 수 있습니다(AND). 조건을 바꾼 뒤 적용을 누르세요. 조건별 통과 행 수와 유효 값 개수가 카드에 표시됩니다. 이 신호 구성은 양식에 저장됩니다. 신호 조건은 그 Y신호에만 적용되며, 파일 공통 조건은 모든 신호에 함께 적용됩니다. CSV 내보내기는 파일 공통 조건 기준의 원본 열을 저장하며 조건별 가상 열은 추가하지 않습니다.</p><h3>X·Y·Z — 3D 공간 좌표</h3><p>3D에서는 같은 CSV의 X=X_m, Y=Y_m, Z=Z_m을 선택합니다. 예시에서는 (1,2,0) → (2,4,1) → (3,3,2)를 잇는 궤적입니다. 이 Y축은 2D의 복수 Y신호 체크 목록과 달리 좌표 열 하나입니다.</p><p>각 축은 해당 데이터 범위로 정규화합니다. X 1m와 Z 1m가 화면에서 같은 길이라는 뜻은 아닙니다. 3D 축 범위는 자동 계산하며 수동 X/Y 표시 범위 입력은 2D용입니다.</p>
 <h3>T / 시간 — 궤적 순서와 재생</h3><p>T=Time_s를 선택하면 숫자 시간 오름차순으로 점을 연결합니다. 같은 시간은 원래 행 순서를 유지합니다. T=행 순서는 파일에 저장된 순서대로 진행합니다. T는 추가 공간축이 아니며, X를 자동으로 시간 열로 바꾸지도 않습니다.</p><p>시간 표시가 전체 구간이면 모두 표시합니다. 현재 T까지 궤적으로 바꾸면 슬라이더와 재생으로 표시 구간을 늘릴 수 있습니다. 2D에서도 사용할 수 있습니다. 날짜 문자열은 직접 시간으로 해석하지 않으며, 재생은 행 진행 방식이어서 실제 시간 간격을 그대로 재현하지는 않습니다.</p>
 <h3>조건 범위 — 어떤 행을 남길지</h3><p>Speed 최소 11, 최대 13이면 값 12인 행만 남습니다. 최소·최대는 포함합니다. 조건을 여러 개 추가하면 모두 만족해야 합니다(AND). 여러 CSV에서는 조건 열이 속한 파일에만 적용합니다. 이 조건은 필터 CSV 저장 행에도 반영됩니다.</p>
 <h3>축 표시 범위 — 어디를 확대해 볼지</h3><p>X 최소 0, 최대 1, Y 최소 8, 최대 13을 입력하고 사용자 축 설정 적용을 누르면 그 구간을 화면에 표시합니다. 원본 행을 삭제하거나 CSV 저장 행을 제한하는 기능은 아닙니다. 빈 입력은 데이터 자동 범위를 사용하며 최소는 최대보다 작아야 합니다.</p><p>축 범위 자동은 화면 확대·이동과 수동 표시 범위를 자동으로 돌립니다. 입력해 둔 값은 남겨 두므로 사용자 축 설정 적용으로 다시 불러올 수 있습니다. 조건 필터는 유지됩니다. 3D에서는 확대·이동을 복원하며 회전 시점은 유지합니다.</p>
@@ -7806,6 +7908,485 @@ detachedCsvButton.onclick = (event) => {
     ')(window.csvViewerPayload);';
   popup.document.body.append(script);
 };
+
+</script>
+    <script>
+// Conditional Y channels are plot-only aliases. Original CSV records remain untouched.
+let conditionalSignals = [],
+  conditionalSignalRoot = workRoot,
+  conditionalSignalSerial = 0;
+const conditionalOperators = {
+  eq: '=',
+  ne: '≠',
+  gt: '>',
+  ge: '≥',
+  lt: '<',
+  le: '≤',
+  contains: '포함',
+};
+const baseColumnRef = columnRef,
+  baseFindColumn = findColumn;
+function localColumnForRef(source, ref) {
+  if (!source || ref?.file !== source.path) return null;
+  const matches = source.head
+    .map((name, index) => (name === ref.column ? index : -1))
+    .filter((index) => index >= 0);
+  return matches[ref.occurrence || 0] ?? null;
+}
+function conditionalSignalMeta(id) {
+  return columnMeta.findIndex((meta) => meta.signalId === id);
+}
+columnRef = function (index) {
+  const ref = baseColumnRef(index);
+  return ref && columnMeta[index]?.signalId
+    ? { ...ref, signalId: columnMeta[index].signalId }
+    : ref;
+};
+findColumn = function (ref) {
+  if (ref?.signalId) {
+    const index = conditionalSignalMeta(ref.signalId);
+    return index < 0 ? null : index;
+  }
+  return baseFindColumn(ref);
+};
+resolveRef = findColumn;
+window.isConditionalSignalIndex = (index) => !!columnMeta[index]?.signalId;
+window.hasConditionalSignalsForFile = (path) =>
+  conditionalSignals.some((signal) => signal.axis.file === path);
+function signalConditionMatches(value, condition) {
+  const expected = String(condition.value ?? ''),
+    left = num(value),
+    right = num(expected);
+  if (condition.operator === 'contains') return String(value).includes(expected);
+  const equal =
+    Number.isFinite(left) && Number.isFinite(right) ? left === right : String(value) === expected;
+  if (condition.operator === 'eq') return equal;
+  if (condition.operator === 'ne') return !equal;
+  if (!Number.isFinite(left) || !Number.isFinite(right)) return false;
+  return condition.operator === 'gt'
+    ? left > right
+    : condition.operator === 'ge'
+      ? left >= right
+      : condition.operator === 'lt'
+        ? left < right
+        : left <= right;
+}
+function signalDescription(signal) {
+  const conditions = signal.conditions.map(
+    (condition) =>
+      `${condition.axis.column} ${conditionalOperators[condition.operator]} ${condition.value === '' ? '(빈 값)' : condition.value}`,
+  );
+  return (
+    signal.axis.file +
+    ' / ' +
+    signal.axis.column +
+    (conditions.length ? ' · ' + conditions.join(' AND ') : ' · 조건 없음')
+  );
+}
+function compileConditionalSignal(signal) {
+  const sourceIndex = csvSources.findIndex((source) => source.path === signal.axis.file),
+    source = csvSources[sourceIndex],
+    local = localColumnForRef(source, signal.axis);
+  if (local === null || !source.numeric[local])
+    return { error: 'Y열 또는 파일을 찾을 수 없습니다.' };
+  const predicates = signal.conditions.map((condition) => ({
+    local: localColumnForRef(source, condition.axis),
+    condition: { ...condition },
+  }));
+  if (predicates.some((entry) => entry.local === null))
+    return { error: '조건 열을 찾을 수 없습니다. 조건 열을 다시 선택하세요.' };
+  if (
+    predicates.some(
+      ({ condition }) =>
+        !['eq', 'ne', 'contains'].includes(condition.operator) &&
+        !Number.isFinite(num(condition.value)),
+    )
+  )
+    return { error: '크기 비교 조건에는 숫자 값을 입력하세요.' };
+  const acceptsLocal = (row) =>
+    predicates.every((entry) => signalConditionMatches(row[entry.local], entry.condition));
+  return { sourceIndex, source, local, acceptsLocal };
+}
+window.installConditionalSignals = function () {
+  if (conditionalSignalRoot !== workRoot) {
+    conditionalSignals = [];
+    conditionalSignalRoot = workRoot;
+  }
+  const baseCount = csvSources.reduce((count, source) => count + source.head.length, 0);
+  headers.length = baseCount;
+  numeric.length = baseCount;
+  columnMeta.length = baseCount;
+  for (const row of rows) row.length = baseCount;
+  for (const signal of conditionalSignals) {
+    const compiled = compileConditionalSignal(signal);
+    signal.error = compiled.error || '';
+    if (compiled.error) continue;
+    const index = headers.length;
+    headers.push(signalDescription(signal));
+    numeric.push(true);
+    const acceptRow = (row) =>
+      row._source === compiled.sourceIndex &&
+      compiled.acceptsLocal(compiled.source.data[row._localIndex]);
+    columnMeta.push({
+      source: compiled.sourceIndex,
+      local: compiled.local,
+      signalId: signal.id,
+      acceptRow,
+    });
+    for (const row of rows)
+      row[index] = acceptRow(row) ? compiled.source.data[row._localIndex][compiled.local] : '';
+  }
+};
+window.selectConditionalSignals = function (prior) {
+  if (prior.length) return;
+  const files = new Set(conditionalSignals.map((signal) => signal.axis.file));
+  for (const index of selected) {
+    const meta = columnMeta[index];
+    if (meta && !meta.signalId && files.has(csvSources[meta.source].path)) selected.delete(index);
+  }
+  for (const signal of conditionalSignals.filter((entry) => entry.enabled)) {
+    const index = conditionalSignalMeta(signal.id);
+    if (index >= 0) selected.add(index);
+  }
+};
+function rememberSignalSelection() {
+  for (const signal of conditionalSignals) {
+    const index = conditionalSignalMeta(signal.id);
+    if (index >= 0) signal.enabled = selected.has(index);
+  }
+}
+function refreshConditionalSignals() {
+  const refs = [...selected].map(columnRef).filter(Boolean);
+  window.installConditionalSignals();
+  selected = new Set(
+    refs.map(findColumn).filter((index) => index !== null && index >= 0 && numeric[index]),
+  );
+  for (const signal of conditionalSignals) {
+    const index = conditionalSignalMeta(signal.id);
+    if (index >= 0) {
+      if (signal.enabled) selected.add(index);
+      else selected.delete(index);
+    }
+  }
+  renderColumns();
+  renderFilters();
+  update();
+}
+const seriesRowsBeforeConditions = seriesRows;
+seriesRows = function (col) {
+  const meta = columnMeta[col];
+  return meta?.acceptRow
+    ? filtered.filter((entry) => meta.acceptRow(entry.row))
+    : seriesRowsBeforeConditions(col);
+};
+
+const conditionalPanel = document.createElement('section');
+conditionalPanel.id = 'conditionalSignalsPanel';
+conditionalPanel.innerHTML = `<div class="panelhead">조건별 Y신호</div><p class="help">같은 Y열도 조건별로 여러 번 그릴 수 있습니다. 예: Range_m / Target_ID = 1001, Range_m / Target_ID = 1002. 한 신호의 여러 조건은 AND입니다.</p><div class="conditionalAdd"><select id="conditionalYColumn" aria-label="조건별 Y열"></select><button id="addConditionalSignal" class="sidebarAction">조건부 Y신호 추가</button></div><div id="conditionalSignalCards"></div>`;
+graphSections.axes.panel.append(conditionalPanel);
+function newSignalId() {
+  return 'signal-' + Date.now().toString(36) + '-' + ++conditionalSignalSerial;
+}
+function defaultSignalCondition(source) {
+  const local = source.head.findIndex((name) =>
+    /target[_ ]?(id|number|no)|track[_ ]?id|표적번호/i.test(name),
+  );
+  if (local < 0) return null;
+  const values = [...new Set(source.data.map((row) => row[local]))].sort((a, b) =>
+    a.localeCompare(b, 'ko', { numeric: true }),
+  );
+  return {
+    axis: sourceColumnRef(source, local),
+    operator: 'eq',
+    value: values.find((value) => value !== '') || '',
+  };
+}
+function addConditionalSignal(index, copy = null) {
+  rememberSignalSelection();
+  const meta = columnMeta[index];
+  if (!meta) return;
+  const source = csvSources[meta.source],
+    firstCondition = defaultSignalCondition(source);
+  const signal = copy
+    ? JSON.parse(JSON.stringify(copy))
+    : {
+        axis: sourceColumnRef(source, meta.local),
+        conditions: firstCondition ? [firstCondition] : [],
+      };
+  signal.id = newSignalId();
+  signal.enabled = true;
+  delete signal.error;
+  conditionalSignals.push(signal);
+  selected.delete(index);
+  $('selection').value = 'multi';
+  view = null;
+  refreshConditionalSignals();
+  requestAnimationFrame(() => {
+    const card = $('conditionalSignalCards').querySelector(
+      `[data-signal-card="${conditionalSignals.indexOf(signal)}"]`,
+    );
+    if (card?.offsetParent)
+      sidebar.scrollTop +=
+        card.getBoundingClientRect().top - sidebar.getBoundingClientRect().top - 16;
+  });
+}
+function renderConditionalSignalCards() {
+  const old = $('conditionalYColumn').value;
+  $('conditionalYColumn').innerHTML = headers
+    .map((name, index) =>
+      numeric[index] && !columnMeta[index]?.signalId
+        ? `<option value="${index}">${esc(name)}</option>`
+        : '',
+    )
+    .join('');
+  if ([...$('conditionalYColumn').options].some((option) => option.value === old))
+    $('conditionalYColumn').value = old;
+  else {
+    const first = [...selected].find((index) => !columnMeta[index]?.signalId);
+    if (first !== undefined) $('conditionalYColumn').value = String(first);
+  }
+  $('addConditionalSignal').disabled = !$('conditionalYColumn').options.length;
+  $('conditionalSignalCards').innerHTML = conditionalSignals
+    .map((signal, index) => {
+      const source = csvSources.find((entry) => entry.path === signal.axis.file),
+        current = localColumnForRef(source, signal.axis);
+      const options = source
+        ? source.head
+            .map((name, local) =>
+              source.numeric[local]
+                ? `<option value="${local}" ${local === current ? 'selected' : ''}>${esc(name)}</option>`
+                : '',
+            )
+            .join('')
+        : '';
+      const conditions = signal.conditions
+        .map((condition, ci) => {
+          const local = localColumnForRef(source, condition.axis),
+            values =
+              local === null
+                ? []
+                : [...new Set(source.data.map((row) => row[local]))]
+                    .sort((a, b) => a.localeCompare(b, 'ko', { numeric: true }))
+                    .slice(0, 200);
+          return `<div class="signalCondition"><select data-condition-col="${ci}" aria-label="조건 열">${local === null ? '<option value="-1">조건 열 없음</option>' : ''}${source ? source.head.map((name, i) => `<option value="${i}" ${i === local ? 'selected' : ''}>${esc(name)}</option>`).join('') : ''}</select><select data-condition-op="${ci}" aria-label="조건 연산자">${Object.entries(
+            conditionalOperators,
+          )
+            .map(
+              ([op, name]) =>
+                `<option value="${op}" ${op === condition.operator ? 'selected' : ''}>${name}</option>`,
+            )
+            .join(
+              '',
+            )}</select><input data-condition-value="${ci}" aria-label="조건 값" value="${esc(condition.value)}" list="conditionValues-${index}-${ci}" placeholder="예: 1001"><datalist id="conditionValues-${index}-${ci}">${values.map((value) => `<option value="${esc(value)}"></option>`).join('')}</datalist><button data-remove-condition="${ci}" aria-label="조건 제거">×</button></div>`;
+        })
+        .join('');
+      return `<article class="conditionalSignalCard" data-signal-card="${index}"><div class="conditionalCardHeading"><label><input type="checkbox" data-enable-signal ${signal.enabled ? 'checked' : ''}>사용</label><button data-duplicate-signal>복제</button><button data-remove-signal>제거</button></div><small>${esc(signal.axis.file)}</small><label>Y열 <select data-signal-axis aria-label="신호 Y열">${current === null ? '<option value="-1">Y열 없음</option>' : ''}${options}</select></label>${conditions}<div class="conditionalCardActions"><button data-add-condition>＋ 조건 추가</button><button data-apply-signal class="sidebarAction">적용</button></div><p data-signal-count class="help"></p><p class="signalConditionError" role="status">${esc(signal.error || '')}</p></article>`;
+    })
+    .join('');
+  $('conditionalSignalCards')
+    .querySelectorAll('[data-signal-card]')
+    .forEach((card) => {
+      const signal = conditionalSignals[+card.dataset.signalCard],
+        source = csvSources.find((entry) => entry.path === signal.axis.file);
+      card.querySelector('[data-enable-signal]').onchange = (event) => {
+        signal.enabled = event.target.checked;
+        refreshConditionalSignals();
+      };
+      card.querySelector('[data-remove-signal]').onclick = () => {
+        rememberSignalSelection();
+        conditionalSignals = conditionalSignals.filter((entry) => entry !== signal);
+        refreshConditionalSignals();
+      };
+      card.querySelector('[data-duplicate-signal]').onclick = () => {
+        const index = conditionalSignalMeta(signal.id);
+        if (index >= 0) addConditionalSignal(index, signal);
+      };
+      card.querySelector('[data-signal-axis]').onchange = (event) => {
+        if (source && +event.target.value >= 0) {
+          signal.axis = sourceColumnRef(source, +event.target.value);
+          refreshConditionalSignals();
+        }
+      };
+      card.querySelector('[data-add-condition]').onclick = () => {
+        if (!source) return;
+        signal.conditions.push(
+          defaultSignalCondition(source) || {
+            axis: sourceColumnRef(source, 0),
+            operator: 'eq',
+            value: source.data[0]?.[0] || '',
+          },
+        );
+        renderConditionalSignalCards();
+      };
+      card.querySelectorAll('[data-condition-col]').forEach(
+        (input) =>
+          (input.onchange = () => {
+            if (source && +input.value >= 0) {
+              signal.conditions[+input.dataset.conditionCol].axis = sourceColumnRef(
+                source,
+                +input.value,
+              );
+              renderConditionalSignalCards();
+            }
+          }),
+      );
+      card.querySelectorAll('[data-condition-op]').forEach(
+        (input) =>
+          (input.onchange = () => {
+            signal.conditions[+input.dataset.conditionOp].operator = input.value;
+          }),
+      );
+      card.querySelectorAll('[data-condition-value]').forEach(
+        (input) =>
+          (input.oninput = () => {
+            signal.conditions[+input.dataset.conditionValue].value = input.value;
+          }),
+      );
+      card.querySelectorAll('[data-remove-condition]').forEach(
+        (button) =>
+          (button.onclick = () => {
+            signal.conditions.splice(+button.dataset.removeCondition, 1);
+            renderConditionalSignalCards();
+          }),
+      );
+      card.querySelector('[data-apply-signal]').onclick = () => {
+        rememberSignalSelection();
+        view = null;
+        refreshConditionalSignals();
+      };
+    });
+  conditionalPanel.hidden = $('dimension').value === '3d';
+}
+$('addConditionalSignal').onclick = () => addConditionalSignal(+$('conditionalYColumn').value);
+const renderColumnsBeforeConditionalSignals = renderColumns;
+renderColumns = function () {
+  rememberSignalSelection();
+  renderColumnsBeforeConditionalSignals();
+  $('columns')
+    .querySelectorAll('input[data-col]')
+    .forEach((input) => {
+      if (!numeric[+input.dataset.col]) return;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'signalQuickCondition';
+      button.textContent = '조건';
+      button.title = '이 Y열을 조건별 신호로 추가합니다.';
+      button.onclick = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        addConditionalSignal(+input.dataset.col);
+      };
+      input.closest('label').append(button);
+    });
+  renderConditionalSignalCards();
+};
+
+function cleanConditionalDefinitions(value) {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) throw Error('조건별 Y신호 형식이 잘못되었습니다.');
+  const ids = new Set();
+  return value.map((signal) => {
+    if (
+      !signal ||
+      typeof signal.id !== 'string' ||
+      ids.has(signal.id) ||
+      !signal.axis ||
+      typeof signal.axis.file !== 'string' ||
+      typeof signal.axis.column !== 'string' ||
+      !Array.isArray(signal.conditions)
+    )
+      throw Error('조건별 Y신호 정보가 잘못되었습니다.');
+    ids.add(signal.id);
+    return {
+      id: signal.id,
+      axis: { ...signal.axis },
+      enabled: signal.enabled !== false,
+      conditions: signal.conditions.map((condition) => {
+        if (
+          !condition?.axis ||
+          typeof condition.axis.file !== 'string' ||
+          typeof condition.axis.column !== 'string' ||
+          !Object.hasOwn(conditionalOperators, condition.operator)
+        )
+          throw Error('Y신호의 조건 열 또는 연산자가 잘못되었습니다.');
+        return {
+          axis: { ...condition.axis },
+          operator: condition.operator,
+          value: String(condition.value ?? ''),
+        };
+      }),
+    };
+  });
+}
+const captureBeforeConditionalSignals = captureTemplate;
+captureTemplate = function () {
+  rememberSignalSelection();
+  refreshConditionalSignals();
+  const value = captureBeforeConditionalSignals();
+  value.conditionalSignals = cleanConditionalDefinitions(conditionalSignals);
+  return value;
+};
+const applyBeforeConditionalSignals = applyTemplate;
+applyTemplate = function (value) {
+  conditionalSignals = cleanConditionalDefinitions(value.conditionalSignals);
+  conditionalSignalRoot = workRoot;
+  window.installConditionalSignals();
+  applyBeforeConditionalSignals(value);
+  rememberSignalSelection();
+  renderColumns();
+};
+function updateConditionalSignalCounts() {
+  $('conditionalSignalCards')
+    .querySelectorAll('[data-signal-card]')
+    .forEach((card) => {
+      const signal = conditionalSignals[+card.dataset.signalCard],
+        index = conditionalSignalMeta(signal.id);
+      const records = index < 0 ? [] : seriesRows(index);
+      const count = records.filter((record) => Number.isFinite(num(record.row[index]))).length;
+      card.querySelector('[data-signal-count]').textContent =
+        `조건 통과 ${records.length.toLocaleString()}행 · 유효 값 ${count.toLocaleString()}개`;
+    });
+}
+const updateBeforeConditionalSignals = update;
+update = function () {
+  updateBeforeConditionalSignals();
+  const count = csvSources.reduce((sum, source) => sum + source.head.length, 0);
+  $('colcount').textContent = count;
+  $('dataSummary').textContent = `${count} 열 / ${filtered.length.toLocaleString()} 행`;
+  $('filesub').textContent = `${rows.length.toLocaleString()}행 · ${count}열 (파일별 독립 X축)`;
+  if (conditionalSignals.length)
+    $('status').textContent += ` · 조건별 Y신호 ${conditionalSignals.length}개`;
+  updateConditionalSignalCounts();
+};
+const drawBeforeConditionalSignals = draw;
+draw = function () {
+  rememberSignalSelection();
+  conditionalPanel.hidden = $('dimension').value === '3d';
+  drawBeforeConditionalSignals();
+  $('filtered').parentElement.title =
+    '파일 공통 조건을 통과한 행 수입니다. 신호별 조건 통과 행 수는 조건별 Y신호 카드와 통계에서 확인하세요.';
+  $('conditionalSignalCards')
+    .querySelectorAll('[data-enable-signal]')
+    .forEach((box, index) => {
+      box.checked = conditionalSignals[index].enabled;
+    });
+  updateConditionalSignalCounts();
+};
+const clearTemplateBeforeConditionalSignals = clearTemplateButton.onclick;
+clearTemplateButton.onclick = () => {
+  conditionalSignals = [];
+  clearTemplateBeforeConditionalSignals();
+};
+const clearFilesBeforeConditionalSignals = $('clearLoadedCsv').onclick;
+$('clearLoadedCsv').onclick = () => {
+  conditionalSignals = [];
+  clearFilesBeforeConditionalSignals();
+};
+renderColumns();
+
+const commonConditionHeading = analysisControls.querySelector('.panelhead');
+if (commonConditionHeading?.firstChild)
+  commonConditionHeading.firstChild.textContent = '파일 공통 조건 ';
 
 </script>
   </body>
