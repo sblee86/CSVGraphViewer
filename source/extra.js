@@ -49,10 +49,18 @@ function axisOptions() {
     let prev = $(id).value;
     $(id).innerHTML =
       (id === 'taxis' ? '<option value="-1">행 순서</option>' : '') +
-      headers.map((h, i) => (numeric[i] ? `<option value="${i}">${esc(h)}</option>` : '')).join('');
+      headers
+        .map((h, i) =>
+          numeric[i] && !window.isConditionalSignalIndex?.(i)
+            ? `<option value="${i}">${esc(h)}</option>`
+            : '',
+        )
+        .join('');
     if ([...$(id).options].some((o) => o.value === prev)) $(id).value = prev;
   }
-  let nums = numeric.map((v, i) => (v ? i : -1)).filter((i) => i >= 0);
+  let nums = numeric
+    .map((v, i) => (v && !window.isConditionalSignalIndex?.(i) ? i : -1))
+    .filter((i) => i >= 0);
   $('yaxis3').value = String(nums[1] ?? nums[0] ?? '');
   $('zaxis').value = String(nums[2] ?? nums[0] ?? '');
   $('taxis').value = '-1';
