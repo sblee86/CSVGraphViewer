@@ -2275,3 +2275,14 @@ header .local.buildLabel {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
+
+#previewSeparateWindow {
+  float: right;
+  padding: 4px 9px;
+  margin-top: -4px;
+  margin-right: 8px;
+  border: 1px solid var(--accent);
+  background: var(--tint);
+  font-size: 11px;
+  color: var(--text);
+}
