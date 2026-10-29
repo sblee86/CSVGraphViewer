@@ -227,6 +227,15 @@ function startDetachedCsvViewer(payload) {
         border-color: #217b71;
         font-weight: 600;
       }
+      #grid td.edited-cell {
+        background: #e4f0ff;
+      }
+      .csvCellEditor {
+        width: 100%;
+        min-width: 80px;
+        padding: 3px;
+        border: 2px solid #217b71;
+      }
       mark.search-match {
         font-weight: 800;
         background: #ffe28a;
@@ -395,6 +404,19 @@ function startDetachedCsvViewer(payload) {
         />
         px
       </label>
+      <label>
+        <input
+          id="csvEditMode"
+          type="checkbox"
+        />
+        값 편집 모드
+      </label>
+      <button
+        id="saveEditedCsv"
+        title="검색·필터·숨긴 열에 관계없이 현재 파일 전체의 수정본을 저장합니다."
+      >
+        수정 CSV 저장
+      </button>
       <button id="copyRow">선택 행 복사</button>
       <button id="pinRow">선택 행 참고 고정</button>
       <button
@@ -484,6 +506,57 @@ function startDetachedCsvViewer(payload) {
     editor = null,
     searchTimer = null;
   const source = () => files[current];
+  let activeCsvEdit = null;
+  function commitCsvEdit() {
+    const edit = activeCsvEdit;
+    activeCsvEdit = null;
+    if (!edit) return;
+    const { file, row, col, input } = edit,
+      key = row + ':' + col;
+    if (file.rows[row][col] !== input.value) {
+      if (!file.edits.has(key)) file.edits.set(key, file.rows[row][col]);
+      file.rows[row][col] = input.value;
+      if (file.edits.get(key) === input.value) file.edits.delete(key);
+      file.unsaved = true;
+    }
+  }
+  function editCsvCell(file, row, col) {
+    const cell = $('grid').querySelector(`[data-row="${row}"] [data-cell="${col}"]`);
+    if (!cell) return;
+    const input = document.createElement('input');
+    input.className = 'csvCellEditor';
+    input.type = 'text';
+    input.value = file.rows[row][col];
+    input.setAttribute('aria-label', file.headers[col] + ' 값 편집');
+    activeCsvEdit = { file, row, col, input };
+    cell.replaceChildren(input);
+    input.onkeydown = (event) => {
+      if (event.key === 'Enter' && !event.isComposing) {
+        event.preventDefault();
+        commitCsvEdit();
+        render();
+      }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        activeCsvEdit = null;
+        render();
+      }
+    };
+    input.onblur = () => {
+      if (activeCsvEdit?.input === input) {
+        commitCsvEdit();
+        render();
+      }
+    };
+    input.focus({ preventScroll: true });
+    input.select();
+    status('Enter 또는 다른 곳 클릭: 적용 · Esc: 취소 · 수정 CSV 저장: 전체 수정본 다운로드');
+  }
+  $('csvEditMode').onchange = () => {
+    commitCsvEdit();
+    render();
+  };
+
   let referenceRows = [],
     contextRow = null,
     contextColumn = null,
@@ -624,6 +697,14 @@ function startDetachedCsvViewer(payload) {
     value.trim() !== '' && Number.isFinite(Number(value)) ? Number(value) : NaN;
 
   function loadSnapshot(snapshot) {
+    commitCsvEdit();
+    if (
+      files.some((file) => file.unsaved) &&
+      !confirm(
+        '저장하지 않은 CSV 수정값이 있습니다. 수정본을 버리고 메인의 파일을 다시 가져올까요?',
+      )
+    )
+      return;
     files = snapshot.files.map((file) => ({
       ...file,
       referenceId: 'main-' + file.sourceId,
@@ -632,6 +713,8 @@ function startDetachedCsvViewer(payload) {
       search: '',
       columnSearch: '',
       frozen: new Set(),
+      edits: new Map(),
+      unsaved: false,
       picked: file.picked ?? null,
       pickedColumns: file.pickedColumns || [],
     }));
@@ -814,6 +897,7 @@ function startDetachedCsvViewer(payload) {
     });
   }
   function render(reveal = false) {
+    commitCsvEdit();
     closeFilter();
     clearTimeout(searchTimer);
     const file = source(),
@@ -830,6 +914,8 @@ function startDetachedCsvViewer(payload) {
       'copyRow',
       'pinRow',
       'saveCsv',
+      'saveEditedCsv',
+      'csvEditMode',
     ])
       $(id).disabled = !file;
     if (!file) {
@@ -866,7 +952,7 @@ function startDetachedCsvViewer(payload) {
               cols
                 .map(
                   (col) =>
-                    `<td data-cell="${col}" class="${file.picked === row && file.pickedColumns.includes(col) ? 'picked-cell ' : ''}${file.frozen.has(col) ? 'frozen-column' : ''}">${highlightedValue(file.rows[row][col], file.search)}</td>`,
+                    `<td data-cell="${col}" class="${file.picked === row && file.pickedColumns.includes(col) ? 'picked-cell ' : ''}${file.frozen.has(col) ? 'frozen-column ' : ''}${file.edits.has(row + ':' + col) ? 'edited-cell' : ''}">${highlightedValue(file.rows[row][col], file.search)}</td>`,
                 )
                 .join('') +
               '</tr>',
@@ -882,15 +968,18 @@ function startDetachedCsvViewer(payload) {
       .forEach(
         (row) =>
           (row.onclick = (event) => {
+            if (event.target.closest('.csvCellEditor')) return;
             file.picked = +row.dataset.row;
             const cell = event.target.closest('[data-cell]');
             file.pickedColumns = cell ? [+cell.dataset.cell] : [];
             render();
-            status('원본 ' + (file.picked + 1) + '행 선택');
+            if ($('csvEditMode').checked && cell)
+              editCsvCell(file, file.picked, +cell.dataset.cell);
+            else status('원본 ' + (file.picked + 1) + '행 선택');
           }),
       );
     $('counts').textContent =
-      `${file.name} · 원본 ${file.rows.length.toLocaleString()}행 · 표시 ${rowIds.length.toLocaleString()}행 · ${cols.length}/${file.headers.length}열`;
+      `${file.name} · 원본 ${file.rows.length.toLocaleString()}행 · 표시 ${rowIds.length.toLocaleString()}행 · ${cols.length}/${file.headers.length}열 · 수정 ${file.edits.size}셀`;
     $('pageInfo').textContent =
       `${rowIds.length ? page * size + 1 : 0}–${Math.min((page + 1) * size, rowIds.length)} / ${rowIds.length.toLocaleString()}행 · ${page + 1}/${pages}쪽`;
     $('pageJump').max = String(pages);
@@ -1106,6 +1195,25 @@ function startDetachedCsvViewer(payload) {
   });
   window.addEventListener('resize', closeFilter);
   $('grid').addEventListener('scroll', closeFilter);
+  $('saveEditedCsv').onclick = () => {
+    commitCsvEdit();
+    const file = source();
+    if (!file) return;
+    const url = URL.createObjectURL(
+      new Blob([serializeCSV(file.headers, file.rows)], { type: 'text/csv;charset=utf-8' }),
+    );
+    const link = document.createElement('a');
+    link.href = url;
+    link.download =
+      file.name
+        .split('/')
+        .pop()
+        .replace(/\.[^.]+$/, '') + '_수정본.csv';
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    file.unsaved = false;
+    status('전체 수정본 CSV 다운로드 · 원본 파일과 메인 그래프는 변경하지 않았습니다.');
+  };
   $('saveCsv').onclick = () => {
     const file = source(),
       cols = file.headers.map((_, i) => i).filter((i) => file.visible.has(i));
@@ -1175,6 +1283,8 @@ function startDetachedCsvViewer(payload) {
           search: '',
           columnSearch: '',
           frozen: new Set(),
+          edits: new Map(),
+          unsaved: false,
           referenceId: 'local-' + ++localFileSerial,
           picked: null,
           pickedColumns: [],
