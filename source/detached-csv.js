@@ -74,6 +74,57 @@ function startDetachedCsvViewer(payload) {
         align-items: center;
         gap: 5px;
       }
+      .windowTools {
+        float: right;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .csvTabs {
+        display: flex;
+        gap: 4px;
+        overflow-x: auto;
+        flex: 0 0 auto;
+        padding: 6px 10px;
+        background: #e7eeeb;
+      }
+      .csvTab {
+        display: flex;
+        flex: 0 0 auto;
+        border: 1px solid #b7c8c1;
+        border-radius: 5px;
+        background: white;
+      }
+      .csvTab.active {
+        border-color: #217b71;
+        background: #d9eee5;
+      }
+      .csvTab button {
+        background: transparent;
+        border: 0;
+        max-width: 250px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      body.compact header .note,
+      body.compact .pages .note {
+        display: none;
+      }
+      body.compact h1 {
+        font-size: 14px;
+      }
+      body.compact header,
+      body.compact .toolbar {
+        padding: 5px 8px;
+        gap: 4px;
+      }
+      body.compact button,
+      body.compact input,
+      body.compact select {
+        padding: 4px 6px;
+      }
       #files {
         max-width: 320px;
       }
@@ -317,6 +368,23 @@ function startDetachedCsvViewer(payload) {
   `;
   document.body.innerHTML = /* HTML */ `
     <header>
+      <div class="windowTools">
+        <label>
+          <input
+            id="alwaysOnTop"
+            type="checkbox"
+          />
+          항상 위
+        </label>
+        <label>
+          <input
+            id="compactView"
+            type="checkbox"
+          />
+          간략히
+        </label>
+        <button id="newCsvWindow">현재 파일 새 창</button>
+      </div>
       <button
         id="resetAll"
         title="열린 모든 CSV의 검색·값 필터·정렬·열 표시 제한을 해제합니다."
@@ -426,6 +494,12 @@ function startDetachedCsvViewer(payload) {
         현재 표 CSV 저장
       </button>
     </div>
+    <div
+      id="csvFileTabs"
+      class="csvTabs"
+      role="tablist"
+      aria-label="열린 CSV 파일"
+    ></div>
     <div id="info">
       <span id="counts"></span>
       <span
@@ -498,7 +572,85 @@ function startDetachedCsvViewer(payload) {
     ></div>
   `;
 
-  const $ = (id) => document.getElementById(id);
+  let viewerDocument = document,
+    viewerWindow = window;
+  const $ = (id) => viewerDocument.getElementById(id);
+  const documentListeners = [],
+    windowListeners = [];
+  function listenDocument(name, handler) {
+    documentListeners.push([name, handler]);
+    viewerDocument.addEventListener(name, handler);
+  }
+  function listenWindow(name, handler) {
+    windowListeners.push([name, handler]);
+    viewerWindow.addEventListener(name, handler);
+  }
+  function switchViewerDocument(target) {
+    for (const [name, handler] of documentListeners)
+      viewerDocument.removeEventListener(name, handler);
+    for (const [name, handler] of windowListeners) viewerWindow.removeEventListener(name, handler);
+    viewerWindow = target;
+    viewerDocument = target.document;
+    for (const [name, handler] of documentListeners) viewerDocument.addEventListener(name, handler);
+    for (const [name, handler] of windowListeners) viewerWindow.addEventListener(name, handler);
+  }
+  let topWindow = null,
+    restoreTopWindow = null;
+  $('compactView').onchange = () => {
+    viewerDocument.body.classList.toggle('compact', $('compactView').checked);
+    positionFrozenColumns();
+  };
+  $('alwaysOnTop').onchange = async () => {
+    if (!$('alwaysOnTop').checked) {
+      const previous = topWindow;
+      restoreTopWindow?.();
+      previous?.close();
+      return;
+    }
+    if (!window.documentPictureInPicture?.requestWindow) {
+      $('alwaysOnTop').checked = false;
+      status(
+        '이 브라우저는 항상 위 창을 지원하지 않습니다. 최신 데스크톱 Chrome·Edge에서 사용하세요.',
+      );
+      return;
+    }
+    commitCsvEdit();
+    try {
+      const pip = await window.documentPictureInPicture.requestWindow({ width: 900, height: 650 });
+      topWindow = pip;
+      pip.document.documentElement.lang = 'ko';
+      pip.document.head.innerHTML = document.head.innerHTML;
+      pip.document.body.className = document.body.className;
+      pip.document.body.style.cssText = document.body.style.cssText;
+      pip.document.body.replaceChildren(...document.body.childNodes);
+      const placeholder = document.createElement('button');
+      placeholder.textContent = '항상 위 창 닫고 기본 창으로 돌아오기';
+      placeholder.onclick = () => {
+        restoreTopWindow?.();
+        pip.close();
+      };
+      document.body.append(placeholder);
+      switchViewerDocument(pip);
+      restoreTopWindow = () => {
+        if (window.closed || topWindow !== pip) return;
+        commitCsvEdit();
+        document.body.className = pip.document.body.className;
+        document.body.style.cssText = pip.document.body.style.cssText;
+        document.body.replaceChildren(...pip.document.body.childNodes);
+        switchViewerDocument(window);
+        topWindow = null;
+        restoreTopWindow = null;
+        $('alwaysOnTop').checked = false;
+        positionFrozenColumns();
+      };
+      pip.addEventListener('pagehide', restoreTopWindow, { once: true });
+      positionFrozenColumns();
+      status('항상 위 창 · 브라우저에서 동시에 한 개만 사용할 수 있습니다.');
+    } catch (error) {
+      $('alwaysOnTop').checked = false;
+      status('항상 위 창을 열지 못했습니다: ' + error.message);
+    }
+  };
   let files = [],
     current = 0,
     page = 0,
@@ -663,9 +815,9 @@ function startDetachedCsvViewer(payload) {
     const menu = $('rowMenu');
     menu.hidden = false;
     menu.style.left =
-      Math.max(4, Math.min(event.clientX, innerWidth - menu.offsetWidth - 4)) + 'px';
+      Math.max(4, Math.min(event.clientX, viewerWindow.innerWidth - menu.offsetWidth - 4)) + 'px';
     menu.style.top =
-      Math.max(4, Math.min(event.clientY, innerHeight - menu.offsetHeight - 4)) + 'px';
+      Math.max(4, Math.min(event.clientY, viewerWindow.innerHeight - menu.offsetHeight - 4)) + 'px';
     $(header ? 'contextFreeze' : 'contextPin').focus({ preventScroll: true });
   });
   $('contextFreeze').onclick = () => {
@@ -678,13 +830,13 @@ function startDetachedCsvViewer(payload) {
     $('grid').scrollLeft = 0;
     status('열 고정은 열 제목 우클릭으로 해제할 수 있습니다.');
   };
-  document.addEventListener('pointerdown', (event) => {
+  listenDocument('pointerdown', (event) => {
     if (!$('rowMenu').contains(event.target)) $('rowMenu').hidden = true;
   });
-  document.addEventListener('keydown', (event) => {
+  listenDocument('keydown', (event) => {
     if (event.key === 'Escape') $('rowMenu').hidden = true;
   });
-  window.addEventListener('resize', () => {
+  listenWindow('resize', () => {
     $('rowMenu').hidden = true;
   });
   $('grid').addEventListener('scroll', () => {
@@ -757,6 +909,44 @@ function startDetachedCsvViewer(payload) {
       .join('');
     $('files').value = String(current);
     $('search').value = source()?.search || '';
+    $('csvFileTabs').innerHTML = files
+      .map(
+        (file, i) =>
+          `<div class="csvTab ${i === current ? 'active' : ''}"><button role="tab" aria-selected="${i === current}" data-file-tab="${i}" title="${escape(file.name)}">${escape(file.name)}</button><button data-close-tab="${i}" aria-label="${escape(file.name)} 닫기">×</button></div>`,
+      )
+      .join('');
+    $('csvFileTabs')
+      .querySelectorAll('[data-file-tab]')
+      .forEach((button) => {
+        button.onclick = () => {
+          commitCsvEdit();
+          current = +button.dataset.fileTab;
+          page = 0;
+          renderFiles();
+          renderColumns();
+          render(true);
+        };
+      });
+    $('csvFileTabs')
+      .querySelectorAll('[data-close-tab]')
+      .forEach((button) => {
+        button.onclick = () => {
+          commitCsvEdit();
+          const index = +button.dataset.closeTab;
+          if (
+            files[index].unsaved &&
+            !viewerWindow.confirm('저장하지 않은 수정값이 있습니다. 이 파일 탭을 닫을까요?')
+          )
+            return;
+          files.splice(index, 1);
+          if (index < current) current--;
+          current = Math.max(0, Math.min(current, files.length - 1));
+          page = 0;
+          renderFiles();
+          renderColumns();
+          render();
+        };
+      });
   }
   function matchingColumns() {
     const file = source();
@@ -880,7 +1070,7 @@ function startDetachedCsvViewer(payload) {
     return ids;
   }
   function revealPicked() {
-    requestAnimationFrame(() => {
+    viewerWindow.requestAnimationFrame(() => {
       const row = $('grid').querySelector('.selected-row');
       if (!row) return;
       const outer = $('grid').getBoundingClientRect(),
@@ -916,6 +1106,7 @@ function startDetachedCsvViewer(payload) {
       'saveCsv',
       'saveEditedCsv',
       'csvEditMode',
+      'newCsvWindow',
     ])
       $(id).disabled = !file;
     if (!file) {
@@ -1086,16 +1277,18 @@ function startDetachedCsvViewer(payload) {
     paintValues();
     const rect = button.getBoundingClientRect(),
       menu = $('filterMenu');
-    menu.style.left = Math.max(6, Math.min(rect.left, innerWidth - menu.offsetWidth - 6)) + 'px';
+    menu.style.left =
+      Math.max(6, Math.min(rect.left, viewerWindow.innerWidth - menu.offsetWidth - 6)) + 'px';
     menu.style.top =
-      Math.max(6, Math.min(rect.bottom + 4, innerHeight - menu.offsetHeight - 6)) + 'px';
+      Math.max(6, Math.min(rect.bottom + 4, viewerWindow.innerHeight - menu.offsetHeight - 6)) +
+      'px';
     $('valueSearch').focus({ preventScroll: true });
   }
 
   $('files').onchange = () => {
     current = +$('files').value;
     page = 0;
-    $('search').value = source().search;
+    renderFiles();
     renderColumns();
     render(true);
   };
@@ -1133,7 +1326,7 @@ function startDetachedCsvViewer(payload) {
     $('grid').scrollTop = 0;
     status('모든 CSV의 검색·필터·정렬을 해제하고 전체 열과 원본 순서를 복원했습니다.');
   };
-  window.addEventListener('resize', positionFrozenColumns);
+  listenWindow('resize', positionFrozenColumns);
   $('prev').onclick = () => {
     page--;
     render();
@@ -1177,23 +1370,23 @@ function startDetachedCsvViewer(payload) {
   $('fontSize').oninput = () => {
     const value = +$('fontSize').value;
     if (value >= 10 && value <= 24) {
-      document.body.style.setProperty('--table-font', value + 'px');
+      viewerDocument.body.style.setProperty('--table-font', value + 'px');
       positionFrozenColumns();
     }
   };
-  document.addEventListener('keydown', (event) => {
+  listenDocument('keydown', (event) => {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
       event.preventDefault();
       $('search').focus();
     }
     if (event.key === 'Escape') closeFilter();
   });
-  document.addEventListener('pointerdown', (event) => {
+  listenDocument('pointerdown', (event) => {
     if (!$('filterMenu').contains(event.target) && !event.target.closest('[data-filter]'))
       closeFilter();
     if (!$('columns').contains(event.target)) $('columns').open = false;
   });
-  window.addEventListener('resize', closeFilter);
+  listenWindow('resize', closeFilter);
   $('grid').addEventListener('scroll', closeFilter);
   $('saveEditedCsv').onclick = () => {
     commitCsvEdit();
@@ -1247,7 +1440,7 @@ function startDetachedCsvViewer(payload) {
       else {
         const input = document.createElement('textarea');
         input.value = text;
-        document.body.append(input);
+        viewerDocument.body.append(input);
         input.select();
         const copied = document.execCommand('copy');
         input.remove();
@@ -1257,6 +1450,44 @@ function startDetachedCsvViewer(payload) {
     } catch {
       status('복사하지 못했습니다. 표에서 값을 선택해 Ctrl+C로 복사하세요.');
     }
+  };
+  $('newCsvWindow').onclick = () => {
+    commitCsvEdit();
+    const file = source();
+    if (!file) return;
+    const child = viewerWindow.open(
+      '',
+      '_blank',
+      'popup,width=1100,height=760,resizable=yes,scrollbars=yes',
+    );
+    if (!child) return status('새 CSV 창이 차단되었습니다. 팝업을 허용해 주세요.');
+    child.opener = null;
+    child.csvViewerPayload = {
+      current: 0,
+      files: [
+        {
+          sourceId: file.sourceId,
+          name: file.name,
+          headers: [...file.headers],
+          rows: file.rows.map((row) => [...row]),
+          filters: [...file.filters].map(([col, values]) => [col, [...values]]),
+          sort: file.sort ? { ...file.sort } : null,
+          picked: file.picked,
+          pickedColumns: [...file.pickedColumns],
+        },
+      ],
+    };
+    const script = child.document.createElement('script');
+    script.textContent =
+      'const parseCSV=' +
+      parseCSV.toString() +
+      ';const serializeCSV=' +
+      serializeCSV.toString() +
+      ';(' +
+      startDetachedCsvViewer.toString() +
+      ')(window.csvViewerPayload);';
+    child.document.body.append(script);
+    window.registerCsvViewerChild?.(child);
   };
   $('openFiles').onclick = () => $('localFiles').click();
   $('localFiles').onchange = async (event) => {
@@ -1309,6 +1540,11 @@ function startDetachedCsvViewer(payload) {
 }
 
 let detachedCsvWindow = null;
+const detachedCsvWindows = new Set();
+function registerDetachedCsvWindow(popup) {
+  detachedCsvWindows.add(popup);
+  popup.registerCsvViewerChild = registerDetachedCsvWindow;
+}
 const detachedCsvButton = document.createElement('button');
 detachedCsvButton.id = 'previewSeparateWindow';
 detachedCsvButton.type = 'button';
@@ -1353,6 +1589,7 @@ detachedCsvButton.onclick = (event) => {
   if (!popup)
     return notice('별도 창이 차단되었습니다. 이 사이트의 팝업을 허용한 뒤 다시 눌러 주세요.');
   detachedCsvWindow = popup;
+  registerDetachedCsvWindow(popup);
   popup.opener = null;
   popup.csvViewerPayload = payload;
   const script = popup.document.createElement('script');
@@ -1378,8 +1615,12 @@ const priorDetachedPreviewHit = showPreviewHit;
 showPreviewHit = function (hit) {
   priorDetachedPreviewHit(hit);
   if (!validPreviewPick(hit)) return;
-  if (detachedCsvWindow && !detachedCsvWindow.closed) {
-    detachedCsvWindow.followCsvGraphPick?.({
+  for (const popup of detachedCsvWindows) {
+    if (popup.closed) {
+      detachedCsvWindows.delete(popup);
+      continue;
+    }
+    popup.followCsvGraphPick?.({
       sourceId: detachedSourceId(hit.source),
       localRow: hit.localRow,
       columns: [...hit.columns],
@@ -1395,3 +1636,18 @@ dataCsvViewerButton.textContent = 'CSV 별도 보기';
 dataCsvViewerButton.title = '열린 CSV를 별도 창에서 보고 추가 CSV도 열 수 있습니다.';
 csvActions.append(dataCsvViewerButton);
 dataCsvViewerButton.onclick = () => detachedCsvButton.click();
+
+const additionalCsvButton = document.createElement('button');
+additionalCsvButton.id = 'newDataCsvWindow';
+additionalCsvButton.type = 'button';
+additionalCsvButton.className = 'sidebarAction';
+additionalCsvButton.textContent = '새 CSV 창 추가';
+additionalCsvButton.title =
+  '기존 창을 유지하고 새 CSV 창을 엽니다. 각 창 안에서 파일 탭을 추가할 수 있습니다.';
+csvActions.append(additionalCsvButton);
+additionalCsvButton.onclick = () => {
+  const previous = detachedCsvWindow;
+  detachedCsvWindow = null;
+  detachedCsvButton.click();
+  if (!detachedCsvWindow) detachedCsvWindow = previous;
+};
