@@ -475,7 +475,7 @@ const fileX = document.createElement('section');
 fileX.className = 'fileXSection';
 fileX.innerHTML =
   '<div class="panelhead">파일별 X축</div><p class="help">각 신호는 해당 파일의 X열로 그립니다. 여러 파일을 같은 그래프에 겹치거나 신호별로 나눠 볼 수 있습니다.</p><div id="fileXList"></div>';
-graphSections.axes.panel.append(fileX);
+graphSections.x.panel.append(fileX);
 const warning = document.createElement('div');
 warning.id = 'multiWarning';
 warning.hidden = true;

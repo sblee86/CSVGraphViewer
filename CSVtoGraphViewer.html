@@ -1338,13 +1338,28 @@ body.resizingTools {
 }
 .graphSubtabs {
   display: grid;
-  grid-template-columns: 1fr 1fr 1.35fr;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 3px;
   padding: 4px;
   background: var(--soft);
   border: 1px solid var(--line);
   border-radius: 7px;
   margin-bottom: 16px;
+}
+#graphSubtab-kind,
+#graphSubtab-range {
+  grid-column: span 3;
+}
+#graphSubtab-x,
+#graphSubtab-y,
+#graphSubtab-z {
+  grid-column: span 2;
+}
+.graphSubtabs:not(.has3d) :is(#graphSubtab-x, #graphSubtab-y) {
+  grid-column: span 3;
+}
+.graphSubtabs button[hidden] {
+  display: none;
 }
 .graphSubtabs button {
   padding: 7px 3px;
@@ -1370,7 +1385,7 @@ body.resizingTools {
   padding-top: 0;
   margin-top: 0;
 }
-#graphSection-axes > #x {
+#graphSection-x > #x {
   margin-bottom: 5px;
 }
 #graphContextMenu {
@@ -1391,6 +1406,9 @@ body.resizingTools {
   text-align: left;
   padding: 9px 14px;
   font: inherit;
+}
+#graphContextMenu button[hidden] {
+  display: none;
 }
 #graphContextMenu button:focus-visible {
   outline: 2px solid var(--accent);
@@ -4606,7 +4624,7 @@ draw = function () {
 syncQuickGraphLayout();
 showTab('data');
 
-// Graph controls have a second tab row so the sidebar stays short.
+// Two menu rows separate general graph options from individual coordinate axes.
 const graphSubtabs = document.createElement('div');
 graphSubtabs.className = 'graphSubtabs';
 graphSubtabs.setAttribute('role', 'tablist');
@@ -4617,8 +4635,10 @@ const axisNodes = [...graphPanel.children].filter(
 );
 for (const [key, title] of [
   ['kind', '그래프 종류'],
-  ['axes', '축 설정'],
-  ['range', '스케일·값 범위'],
+  ['range', '스케일·범위'],
+  ['x', 'X축 설정'],
+  ['y', 'Y축 설정'],
+  ['z', 'Z축 설정 (3D)'],
 ]) {
   const button = document.createElement('button');
   button.id = 'graphSubtab-' + key;
@@ -4641,19 +4661,25 @@ graphHeading.after(graphSubtabs);
 function moveLabel(id, panel) {
   panel.append($(id).closest('label'));
 }
-for (const id of ['dimension', 'layout', 'style', 'timeMode'])
-  moveLabel(id, graphSections.kind.panel);
-for (const id of ['yaxis3', 'zaxis', 'taxis']) moveLabel(id, graphSections.axes.panel);
-// Keep X, single/multi selection, search and signal checkboxes in one axis page.
+for (const id of ['dimension', 'style', 'timeMode']) moveLabel(id, graphSections.kind.panel);
+moveLabel('layout', graphSections.y.panel);
+moveLabel('yaxis3', graphSections.y.panel);
+moveLabel('zaxis', graphSections.z.panel);
+moveLabel('taxis', graphSections.x.panel);
+const originalXAxisCaption = $('x').previousElementSibling;
+// Preserve existing elements and their handlers while splitting the axis pages.
 for (const node of axisNodes) {
   if (node.classList.contains('hint')) graphSections.kind.panel.append(node);
-  else graphSections.axes.panel.append(node);
+  else if (node === $('x') || node === originalXAxisCaption) graphSections.x.panel.append(node);
+  else graphSections.y.panel.append(node);
 }
 graphSections.range.panel.append(analysisControls);
 graphOptions.remove();
-function openGraphSection(key, focusTarget = false) {
+function openGraphSection(key, focusTarget = false, revealSidebar = true) {
+  if (key === 'axes') key = 'y'; // Legacy internal shortcuts open Y signals.
+  if (key === 'z' && $('dimension').value !== '3d') key = 'y';
   if (!graphSections[key]) key = 'kind';
-  showTab('graph');
+  if (revealSidebar) showTab('graph');
   for (const [k, { panel, button }] of Object.entries(graphSections)) {
     panel.hidden = k !== key;
     button.classList.toggle('on', k === key);
@@ -4664,12 +4690,16 @@ function openGraphSection(key, focusTarget = false) {
   if (focusTarget) graphSections[key].button.focus({ preventScroll: true });
 }
 graphSubtabs.addEventListener('keydown', (e) => {
-  const keys = Object.keys(graphSections),
+  const keys = Object.keys(graphSections).filter((key) => !graphSections[key].button.hidden),
     i = keys.findIndex((k) => graphSections[k].button === e.target);
   if (i < 0 || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
   e.preventDefault();
   const next =
-    e.key === 'Home' ? 0 : e.key === 'End' ? 2 : (i + (e.key === 'ArrowRight' ? 1 : 2)) % 3;
+    e.key === 'Home'
+      ? 0
+      : e.key === 'End'
+        ? keys.length - 1
+        : (i + (e.key === 'ArrowRight' ? 1 : keys.length - 1)) % keys.length;
   openGraphSection(keys[next], true);
 });
 openGraphSection('kind');
@@ -4683,12 +4713,15 @@ graphContextMenu.setAttribute('role', 'menu');
 graphContextMenu.setAttribute('aria-label', '그래프 설정 바로가기');
 for (const [key, label] of [
   ['kind', '그래프 종류'],
-  ['axes', '축 설정'],
-  ['range', '스케일·값 범위'],
+  ['range', '스케일·범위'],
+  ['x', 'X축 설정'],
+  ['y', 'Y축 설정'],
+  ['z', 'Z축 설정 (3D)'],
 ]) {
   const item = document.createElement('button');
   item.type = 'button';
   item.textContent = label;
+  item.dataset.graphSection = key;
   item.setAttribute('role', 'menuitem');
   item.onclick = () => {
     closeGraphMenu();
@@ -5228,7 +5261,7 @@ const fileX = document.createElement('section');
 fileX.className = 'fileXSection';
 fileX.innerHTML =
   '<div class="panelhead">파일별 X축</div><p class="help">각 신호는 해당 파일의 X열로 그립니다. 여러 파일을 같은 그래프에 겹치거나 신호별로 나눠 볼 수 있습니다.</p><div id="fileXList"></div>';
-graphSections.axes.panel.append(fileX);
+graphSections.x.panel.append(fileX);
 const warning = document.createElement('div');
 warning.id = 'multiWarning';
 warning.hidden = true;
@@ -6269,7 +6302,7 @@ helpDialog.setAttribute('aria-labelledby', 'viewerHelpTitle');
 helpDialog.innerHTML = `<div class="helpTitle"><h2 id="viewerHelpTitle">CSVGraphViewer 사용법</h2><button id="viewerHelpClose" aria-label="도움말 닫기">닫기 ×</button></div>
 <section><h3>1. 시작 · 데이터 탭</h3><p>데스크톱 Chrome 또는 Edge에서 작업폴더를 선택하고 읽기·쓰기 권한을 허용하세요. CSV/TSV의 첫 행은 열 이름입니다. 작업폴더와 하위폴더의 파일을 클릭하거나 체크한 뒤 ‘선택 CSV 함께 열기’를 누릅니다. ‘CSV 여러 개 추가’로 외부 파일도 열 수 있습니다.</p><p>한글이 깨지면 문자 인코딩을 CP949 / EUC-KR로 바꾸세요. 구분자는 자동 감지 또는 쉼표·세미콜론·탭을 지정합니다. 외부에서 파일을 바꾼 뒤에는 목록 새로고침을 누르세요. 열린 파일의 ×는 원본 삭제가 아니라 화면에서 제외하는 기능입니다.</p></section>
 <section><h3>2. 그래프설정 → 그래프 종류</h3><p>2D는 여러 파일의 신호를 겹치거나 신호별로 나누어 비교합니다. 선·산점도·선+점을 선택할 수 있습니다. 3D는 같은 CSV의 X·Y·Z 좌표를 궤적으로 표시하며 각 축을 데이터 범위로 정규화합니다. T는 숫자 시간 열 또는 행 순서입니다. 시간 표시를 ‘현재 T까지’로 바꾸고 슬라이더나 재생을 사용하세요.</p></section>
-<section><h3>3. 그래프설정 → 축 설정</h3><p>2D에서는 X열과 Y신호 체크박스를 선택합니다. 여러 파일은 각 파일의 X열을 사용하며 파일별 X축에서 따로 지정할 수 있습니다. 파일 사이 행을 합치거나 시간을 자동 보간하지 않습니다. 같은 CSV에서 표적별로 나누려면 Y열 옆 조건 버튼 또는 조건별 Y신호를 사용하세요. 예: Range_m에 Target_ID=1001 조건을 적용하고 복제하여 1002로 바꾸면 두 선을 별도로 그립니다. 여러 조건은 AND이며 적용 버튼으로 갱신하고 양식에도 저장합니다. 파일 공통 조건은 모든 신호에, 조건별 Y신호는 그 신호에만 적용합니다. 2D에서는 3D용 Y·Z 좌표 선택을 숨깁니다. 3D로 바꾸면 X·Y·Z 좌표 선택이 나타나고 2D Y신호 목록은 숨깁니다. 3D는 한 파일의 X·Y·Z를 선택하세요. 열 이름은 CSV 첫 행을 기준으로 연결합니다.</p></section>
+<section><h3>3. 그래프설정 → X축·Y축·Z축 설정</h3><p>설정 메뉴 첫 줄은 그래프 종류와 스케일·범위, 둘째 줄은 X축·Y축·Z축 설정입니다. X축 설정에서는 공통 X열·파일별 X열과 T를 정합니다. Y축 설정에서는 복수/단일 신호 선택, 열 검색, 조건별 Y신호를 설정하고 그래프 배치를 겹치기 또는 개별로 정합니다. Z축 설정은 3D에서만 표시합니다. 2D에서는 X열과 Y신호 체크박스를 선택합니다. 여러 파일은 각 파일의 X열을 사용하며 파일별 X축에서 따로 지정할 수 있습니다. 파일 사이 행을 합치거나 시간을 자동 보간하지 않습니다. 같은 CSV에서 표적별로 나누려면 Y열 옆 조건 버튼 또는 조건별 Y신호를 사용하세요. 예: Range_m에 Target_ID=1001 조건을 적용하고 복제하여 1002로 바꾸면 두 선을 별도로 그립니다. 여러 조건은 AND이며 적용 버튼으로 갱신하고 양식에도 저장합니다. 파일 공통 조건은 모든 신호에, 조건별 Y신호는 그 신호에만 적용합니다. 2D에서는 3D용 Y·Z 좌표 선택을 숨깁니다. 3D로 바꾸면 X·Y·Z 좌표 선택이 나타나고 2D Y신호 목록은 숨깁니다. 3D는 한 파일의 X·Y·Z를 선택하세요. 열 이름은 CSV 첫 행을 기준으로 연결합니다.</p></section>
 <section><h3>4. 그래프설정 → 스케일·값 범위</h3><p>조건 필터는 열의 최소·최대에 해당하는 행만 남기며 여러 조건은 AND로 적용합니다. 여러 CSV에서는 해당 열이 속한 파일에만 적용합니다. X/Y 표시 범위를 입력한 뒤 ‘사용자 축 설정 적용’을 누르세요(2D). ‘축 범위 자동’은 자동 보기로 복원하며 입력한 사용자 범위와 조건은 유지합니다.</p></section>
 <section><h3>5. 메인 그래프 조작</h3><p>‘축 범위 자동’ 왼쪽의 ‘신호별 개별 보기’를 체크하면 신호별 그래프로 나뉘고, 해제하면 한 그래프에 겹칩니다. 그래프설정의 배치와 양식 설정에 함께 반영됩니다. 이 기능은 2D에서 사용합니다.</p><p>‘확대’는 왼쪽 드래그로 영역을 확대하고 ‘이동’은 왼쪽 드래그로 화면을 이동합니다. 가운데 버튼 드래그는 항상 이동, 휠은 확대·축소, 더블클릭은 초기 보기입니다. 우측 상단 전체보기는 저장 파일 목록을 엽니다. 3D에서 왼쪽 드래그는 회전입니다. 우클릭 메뉴로 그래프 설정에 바로 갈 수 있습니다. 2D 그래프의 선이나 점에 마우스를 가까이 대면 가장 가까운 신호 하나의 원본 X·Y값과 행 번호만 표시합니다. 빈 영역에서는 숨깁니다. 선 사이 구간에서도 값을 보간하지 않고 가까운 원본 레코드를 표시합니다.</p><p>전체 행은 열린 CSV의 총 레코드 수, 조건 통과 행은 그래프 조건을 통과한 수, 선택 신호는 Y신호 수입니다. X축 보기 범위는 현재 표시하는 최소·최대 X값이며 시간 재생이나 CSV 저장 행 수를 뜻하지 않습니다. 여러 파일은 각 파일의 X열 값을 공통 표시 범위에서 그립니다.</p></section>
 <section><h3>6. 양식 탭</h3><p>원하는 파일·열·그래프 설정 후 이름을 적고 양식을 저장하세요. JSON은 작업폴더/양식/에 저장하며 CSV 자체는 포함하지 않습니다. 양식을 클릭하면 현재 작업폴더에서 상대 경로 또는 유일한 파일명으로 CSV를 찾아 열 이름에 맞추어 그래프를 복원합니다. 중복 파일명이나 없는 파일·열은 안내합니다.</p><p>가져오기는 외부 양식을 작업폴더에 복사합니다. 목록 새로고침으로 변경을 읽으세요. 체크박스와 ‘선택 삭제’는 선택한 양식 JSON을 실제로 삭제합니다. ‘양식 해제’는 저장 파일을 유지하고 현재 적용을 취소하여 기본 2D 분석을 시작합니다.</p></section>
@@ -6620,9 +6653,9 @@ $('reset').title = '내보내기 폴더의 PNG·CSV 저장 파일 목록과 미�
 </script>
     <script>
 window.CSV_GRAPH_BUILD = {
-  "version": "1.0.27",
-  "built_at": "2026-10-29T10:48:05+09:00",
-  "source_hash": "9f8670b55b7f444872e7da7a18df1845983820efaab521de1d56c4e33070811e"
+  "version": "1.0.29",
+  "built_at": "2026-10-29T11:02:13+09:00",
+  "source_hash": "887488f38d78de8ba1559a3b05d877861c297560447b6b8365a520a8603f2a3f"
 };
 
 </script>
@@ -6784,14 +6817,9 @@ const coordinateNote = document.createElement('p');
 coordinateNote.className = 'help';
 coordinateNote.textContent =
   '3D는 같은 CSV의 X·Y·Z 열을 선택하세요. T는 시간 열 또는 행 순서입니다.';
-graphSections.axes.panel.prepend(
-  xAxisCaption,
-  $('x'),
-  yCoordinateLabel,
-  zCoordinateLabel,
-  timeCoordinateLabel,
-  coordinateNote,
-);
+graphSections.x.panel.prepend(xAxisCaption, $('x'), timeCoordinateLabel);
+graphSections.y.panel.prepend(yCoordinateLabel);
+graphSections.z.panel.prepend(zCoordinateLabel, coordinateNote);
 const ySignalControls = [
   $('selection').closest('.row'),
   $('search'),
@@ -6801,6 +6829,11 @@ const ySignalControls = [
 ];
 function syncDimensionAxisControls() {
   const is3d = $('dimension').value === '3d';
+  graphSections.z.button.hidden = !is3d;
+  graphSubtabs.classList.toggle('has3d', is3d);
+  const zShortcut = graphContextMenu.querySelector('[data-graph-section="z"]');
+  if (zShortcut) zShortcut.hidden = !is3d;
+  if (!is3d && !graphSections.z.panel.hidden) openGraphSection('y', false, false);
   yCoordinateLabel.hidden = !is3d;
   zCoordinateLabel.hidden = !is3d;
   coordinateNote.hidden = !is3d;
@@ -8516,7 +8549,7 @@ seriesRows = function (col) {
 const conditionalPanel = document.createElement('section');
 conditionalPanel.id = 'conditionalSignalsPanel';
 conditionalPanel.innerHTML = `<div class="panelhead">조건별 Y신호</div><p class="help">같은 Y열도 조건별로 여러 번 그릴 수 있습니다. 예: Range_m / Target_ID = 1001, Range_m / Target_ID = 1002. 한 신호의 여러 조건은 AND입니다.</p><div class="conditionalAdd"><select id="conditionalYColumn" aria-label="조건별 Y열"></select><button id="addConditionalSignal" class="sidebarAction">조건부 Y신호 추가</button></div><div id="conditionalSignalCards"></div>`;
-graphSections.axes.panel.append(conditionalPanel);
+graphSections.y.panel.append(conditionalPanel);
 function newSignalId() {
   return 'signal-' + Date.now().toString(36) + '-' + ++conditionalSignalSerial;
 }

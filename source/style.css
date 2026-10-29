@@ -1329,13 +1329,28 @@ body.resizingTools {
 }
 .graphSubtabs {
   display: grid;
-  grid-template-columns: 1fr 1fr 1.35fr;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 3px;
   padding: 4px;
   background: var(--soft);
   border: 1px solid var(--line);
   border-radius: 7px;
   margin-bottom: 16px;
+}
+#graphSubtab-kind,
+#graphSubtab-range {
+  grid-column: span 3;
+}
+#graphSubtab-x,
+#graphSubtab-y,
+#graphSubtab-z {
+  grid-column: span 2;
+}
+.graphSubtabs:not(.has3d) :is(#graphSubtab-x, #graphSubtab-y) {
+  grid-column: span 3;
+}
+.graphSubtabs button[hidden] {
+  display: none;
 }
 .graphSubtabs button {
   padding: 7px 3px;
@@ -1361,7 +1376,7 @@ body.resizingTools {
   padding-top: 0;
   margin-top: 0;
 }
-#graphSection-axes > #x {
+#graphSection-x > #x {
   margin-bottom: 5px;
 }
 #graphContextMenu {
@@ -1382,6 +1397,9 @@ body.resizingTools {
   text-align: left;
   padding: 9px 14px;
   font: inherit;
+}
+#graphContextMenu button[hidden] {
+  display: none;
 }
 #graphContextMenu button:focus-visible {
   outline: 2px solid var(--accent);

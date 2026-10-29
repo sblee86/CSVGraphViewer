@@ -172,7 +172,7 @@ draw = function () {
 syncQuickGraphLayout();
 showTab('data');
 
-// Graph controls have a second tab row so the sidebar stays short.
+// Two menu rows separate general graph options from individual coordinate axes.
 const graphSubtabs = document.createElement('div');
 graphSubtabs.className = 'graphSubtabs';
 graphSubtabs.setAttribute('role', 'tablist');
@@ -183,8 +183,10 @@ const axisNodes = [...graphPanel.children].filter(
 );
 for (const [key, title] of [
   ['kind', '그래프 종류'],
-  ['axes', '축 설정'],
-  ['range', '스케일·값 범위'],
+  ['range', '스케일·범위'],
+  ['x', 'X축 설정'],
+  ['y', 'Y축 설정'],
+  ['z', 'Z축 설정 (3D)'],
 ]) {
   const button = document.createElement('button');
   button.id = 'graphSubtab-' + key;
@@ -207,19 +209,25 @@ graphHeading.after(graphSubtabs);
 function moveLabel(id, panel) {
   panel.append($(id).closest('label'));
 }
-for (const id of ['dimension', 'layout', 'style', 'timeMode'])
-  moveLabel(id, graphSections.kind.panel);
-for (const id of ['yaxis3', 'zaxis', 'taxis']) moveLabel(id, graphSections.axes.panel);
-// Keep X, single/multi selection, search and signal checkboxes in one axis page.
+for (const id of ['dimension', 'style', 'timeMode']) moveLabel(id, graphSections.kind.panel);
+moveLabel('layout', graphSections.y.panel);
+moveLabel('yaxis3', graphSections.y.panel);
+moveLabel('zaxis', graphSections.z.panel);
+moveLabel('taxis', graphSections.x.panel);
+const originalXAxisCaption = $('x').previousElementSibling;
+// Preserve existing elements and their handlers while splitting the axis pages.
 for (const node of axisNodes) {
   if (node.classList.contains('hint')) graphSections.kind.panel.append(node);
-  else graphSections.axes.panel.append(node);
+  else if (node === $('x') || node === originalXAxisCaption) graphSections.x.panel.append(node);
+  else graphSections.y.panel.append(node);
 }
 graphSections.range.panel.append(analysisControls);
 graphOptions.remove();
-function openGraphSection(key, focusTarget = false) {
+function openGraphSection(key, focusTarget = false, revealSidebar = true) {
+  if (key === 'axes') key = 'y'; // Legacy internal shortcuts open Y signals.
+  if (key === 'z' && $('dimension').value !== '3d') key = 'y';
   if (!graphSections[key]) key = 'kind';
-  showTab('graph');
+  if (revealSidebar) showTab('graph');
   for (const [k, { panel, button }] of Object.entries(graphSections)) {
     panel.hidden = k !== key;
     button.classList.toggle('on', k === key);
@@ -230,12 +238,16 @@ function openGraphSection(key, focusTarget = false) {
   if (focusTarget) graphSections[key].button.focus({ preventScroll: true });
 }
 graphSubtabs.addEventListener('keydown', (e) => {
-  const keys = Object.keys(graphSections),
+  const keys = Object.keys(graphSections).filter((key) => !graphSections[key].button.hidden),
     i = keys.findIndex((k) => graphSections[k].button === e.target);
   if (i < 0 || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
   e.preventDefault();
   const next =
-    e.key === 'Home' ? 0 : e.key === 'End' ? 2 : (i + (e.key === 'ArrowRight' ? 1 : 2)) % 3;
+    e.key === 'Home'
+      ? 0
+      : e.key === 'End'
+        ? keys.length - 1
+        : (i + (e.key === 'ArrowRight' ? 1 : keys.length - 1)) % keys.length;
   openGraphSection(keys[next], true);
 });
 openGraphSection('kind');
@@ -249,12 +261,15 @@ graphContextMenu.setAttribute('role', 'menu');
 graphContextMenu.setAttribute('aria-label', '그래프 설정 바로가기');
 for (const [key, label] of [
   ['kind', '그래프 종류'],
-  ['axes', '축 설정'],
-  ['range', '스케일·값 범위'],
+  ['range', '스케일·범위'],
+  ['x', 'X축 설정'],
+  ['y', 'Y축 설정'],
+  ['z', 'Z축 설정 (3D)'],
 ]) {
   const item = document.createElement('button');
   item.type = 'button';
   item.textContent = label;
+  item.dataset.graphSection = key;
   item.setAttribute('role', 'menuitem');
   item.onclick = () => {
     closeGraphMenu();
