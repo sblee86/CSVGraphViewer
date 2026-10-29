@@ -1,5 +1,5 @@
 window.CSV_GRAPH_BUILD = {
-  "version": "1.0.25",
-  "built_at": "2026-10-29T10:44:03+09:00",
-  "source_hash": "96e9c7a63efd08faa536b227453559777f2371fc611891eae6167eeb2792f602"
+  "version": "1.0.27",
+  "built_at": "2026-10-29T10:48:05+09:00",
+  "source_hash": "9f8670b55b7f444872e7da7a18df1845983820efaab521de1d56c4e33070811e"
 };
