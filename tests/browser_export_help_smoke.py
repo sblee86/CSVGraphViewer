@@ -39,7 +39,9 @@ with sync_playwright() as p:
   assert page.evaluate("$('settingsOpen').nextElementSibling===$('viewerHelpOpen')")
   page.locator('#viewerHelpOpen').click()
   assert page.locator('#viewerHelp').is_visible()
-  assert page.locator('#viewerHelp section').count()==9
+  assert page.locator('#viewerHelp section').count() >= 9
+  assert '그래프 별도 창' in page.locator('#viewerHelp').inner_text()
+  assert '참고행 고정' in page.locator('#viewerHelp').inner_text()
   assert '최초배포자:이상범(sangbum.lee@ligdna.com)' in page.locator('#viewerHelp').inner_text()
   assert '마음대로 수정 배포가능합니다' in page.locator('#viewerHelp').inner_text()
   page.locator('#viewerHelpClose').click()

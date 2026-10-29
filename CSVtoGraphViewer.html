@@ -6273,7 +6273,8 @@ helpDialog.innerHTML = `<div class="helpTitle"><h2 id="viewerHelpTitle">CSVGraph
 <section><h3>4. 그래프설정 → 스케일·값 범위</h3><p>조건 필터는 열의 최소·최대에 해당하는 행만 남기며 여러 조건은 AND로 적용합니다. 여러 CSV에서는 해당 열이 속한 파일에만 적용합니다. X/Y 표시 범위를 입력한 뒤 ‘사용자 축 설정 적용’을 누르세요(2D). ‘축 범위 자동’은 자동 보기로 복원하며 입력한 사용자 범위와 조건은 유지합니다.</p></section>
 <section><h3>5. 메인 그래프 조작</h3><p>‘축 범위 자동’ 왼쪽의 ‘신호별 개별 보기’를 체크하면 신호별 그래프로 나뉘고, 해제하면 한 그래프에 겹칩니다. 그래프설정의 배치와 양식 설정에 함께 반영됩니다. 이 기능은 2D에서 사용합니다.</p><p>‘확대’는 왼쪽 드래그로 영역을 확대하고 ‘이동’은 왼쪽 드래그로 화면을 이동합니다. 가운데 버튼 드래그는 항상 이동, 휠은 확대·축소, 더블클릭은 초기 보기입니다. 우측 상단 전체보기는 저장 파일 목록을 엽니다. 3D에서 왼쪽 드래그는 회전입니다. 우클릭 메뉴로 그래프 설정에 바로 갈 수 있습니다. 2D 그래프의 선이나 점에 마우스를 가까이 대면 가장 가까운 신호 하나의 원본 X·Y값과 행 번호만 표시합니다. 빈 영역에서는 숨깁니다. 선 사이 구간에서도 값을 보간하지 않고 가까운 원본 레코드를 표시합니다.</p><p>전체 행은 열린 CSV의 총 레코드 수, 조건 통과 행은 그래프 조건을 통과한 수, 선택 신호는 Y신호 수입니다. X축 보기 범위는 현재 표시하는 최소·최대 X값이며 시간 재생이나 CSV 저장 행 수를 뜻하지 않습니다. 여러 파일은 각 파일의 X열 값을 공통 표시 범위에서 그립니다.</p></section>
 <section><h3>6. 양식 탭</h3><p>원하는 파일·열·그래프 설정 후 이름을 적고 양식을 저장하세요. JSON은 작업폴더/양식/에 저장하며 CSV 자체는 포함하지 않습니다. 양식을 클릭하면 현재 작업폴더에서 상대 경로 또는 유일한 파일명으로 CSV를 찾아 열 이름에 맞추어 그래프를 복원합니다. 중복 파일명이나 없는 파일·열은 안내합니다.</p><p>가져오기는 외부 양식을 작업폴더에 복사합니다. 목록 새로고침으로 변경을 읽으세요. 체크박스와 ‘선택 삭제’는 선택한 양식 JSON을 실제로 삭제합니다. ‘양식 해제’는 저장 파일을 유지하고 현재 적용을 취소하여 기본 2D 분석을 시작합니다.</p></section>
-<section><h3>7. 데이터 미리보기</h3><p>그래프 점을 클릭하면 원본 데이터 행과 셀을 찾아 표 내부 스크롤을 가운데로 맞춥니다. 선택 셀은 빨간색, 같은 행은 굵게·1pt 크게 표시합니다. 원본 행 번호를 유지하며 100행씩 페이지를 이동합니다.</p><p>고정 버튼 옆의 별도 창으로 보기로 CSV 전용 창을 열 수 있습니다. 별도 창 상단에서 파일 선택, 전체 검색, 체크 필터와 정렬, 행 이동, 표시 열과 글자 크기 조절, 선택 행 복사, 현재 표 CSV 다운로드를 사용합니다. 별도 창은 복사본이므로 메인 그래프와 원본 파일을 바꾸지 않으며, 다시 열기 버튼을 누르면 메인의 최신 표 설정을 불러옵니다.</p><p>열 제목의 ▼에서 고유값·개수 확인, 검색·체크박스 선택, 오름차순·내림차순 정렬을 사용할 수 있습니다. 여러 열 필터는 AND입니다. 이 기능은 표에만 적용하며 그래프나 CSV 내보내기는 바꾸지 않습니다. 그래프에서 선택한 행이 숨겨져 있으면 해당 행을 제외한 표 필터를 안내와 함께 해제합니다.</p></section>
+<section><h3>그래프 별도 창</h3><p>메인 그래프 도구의 그래프 별도 창 버튼은 현재 신호·조건·시간 표시 구간을 복사합니다. 휠과 ＋/－로 확대·축소하고 영역 확대 드래그, 이동, 축범위 자동, 개별 그래프 도구를 사용하세요. 3D는 드래그로 회전하고 이동 모드에서 위치를 옮깁니다. 점을 클릭하면 메인 미리보기와 연동을 켠 CSV 별도 창에 해당 행을 표시합니다. PNG 저장은 현재 별도 그래프 전체를 브라우저 다운로드로 저장합니다. 별도 창 조작은 메인 축 범위를 바꾸지 않습니다. 메인 신호나 조건을 바꾼 뒤에는 메인에서 다시 가져오기를 누르세요. 메인을 닫아도 복사한 그래프와 PNG 저장은 사용할 수 있습니다.</p></section>
+<section><h3>7. 데이터 미리보기</h3><p>그래프 점을 클릭하면 원본 데이터 행과 셀을 찾아 표 내부 스크롤을 가운데로 맞춥니다. 선택 셀은 빨간색, 같은 행은 굵게·1pt 크게 표시합니다. 원본 행 번호를 유지하며 100행씩 페이지를 이동합니다.</p><p>고정 버튼 옆의 별도 창으로 보기로 CSV 전용 창을 열 수 있습니다. 데이터 탭의 CSV 별도 보기 버튼으로도 열 수 있으며, 열린 CSV가 없어도 별도 창의 CSV 추가 열기로 시작할 수 있습니다. 별도 창 상단에서 파일 선택, 전체 검색, 체크 필터와 정렬, 행 이동, 표시 열과 글자 크기 조절, 선택 행 복사, 현재 표 CSV 다운로드를 사용합니다. 별도 창의 그래프 선택 연동 체크박스를 켜면 메인 또는 별도 그래프에서 클릭한 원본 행과 셀로 이동합니다. 선택 행을 가린 검색·열 필터는 해제하고 숨긴 선택 열도 표시합니다. 체크를 끄면 검색·필터·스크롤을 자유롭게 유지하며 다시 켜면 마지막 선택으로 이동합니다. 행을 우클릭하고 참고행 고정을 누르면 하단에 여러 행을 모아 비교합니다. 다른 파일의 행도 함께 고정할 수 있고 검색·정렬·페이지·그래프 선택이 바뀌어도 참고행은 유지됩니다. 참고행의 해제 또는 모두 해제로 취소합니다. 참고행은 창 안의 복사본으로 창을 닫으면 사라집니다. 표 조작은 원본 파일을 바꾸지 않으며, 다시 열기 버튼을 누르면 메인의 최신 표 설정을 불러옵니다.</p><p>열 제목의 ▼에서 고유값·개수 확인, 검색·체크박스 선택, 오름차순·내림차순 정렬을 사용할 수 있습니다. 여러 열 필터는 AND입니다. 이 기능은 표에만 적용하며 그래프나 CSV 내보내기는 바꾸지 않습니다. 그래프에서 선택한 행이 숨겨져 있으면 해당 행을 제외한 표 필터를 안내와 함께 해제합니다.</p></section>
 <section><h3>8. PNG 저장 · CSV 내보내기</h3><p>작업폴더/내보내기/에 <b>현재날짜_양식명_축데이터명.확장자</b>로 저장합니다. 날짜는 사용 중인 PC의 현지 날짜입니다. 양식 미적용 시 ‘양식없음’, 여러 Y신호 중 첫 번째 선택 신호(3D는 Y열) 하나를 이름에 사용합니다. 같은 이름은 (1), (2)를 붙여 기존 파일을 덮어쓰지 않습니다.</p><p>전체보기에서 PNG·CSV 탭으로 저장 파일을 확인합니다. 파일명을 누르면 아래에 미리보기가 열리고 ‘파일 열기’로 브라우저에서 열 수도 있습니다. 체크박스와 선택 삭제는 내보내기 폴더의 파일을 실제로 삭제합니다.</p><p>PNG는 현재 그래프 이미지입니다. CSV는 그래프 조건을 통과한 행을 저장하며 표 필터·정렬, 화면 확대 범위, T 재생 구간은 CSV 저장 조건이 아닙니다. 여러 파일 CSV는 파일·열 이름을 구분하고 다른 파일의 셀은 빈 값으로 저장합니다.</p></section>
 <section><h3>9. 설정 · 오프라인 사용</h3><p>상단에 버전과 한국 시간 기준 빌드 시각이 표시됩니다. 신호 그래프 제목을 눌러 접거나 펼칠 수 있습니다. 데이터 미리보기 오른쪽 하단 고정으로 메인 영역 아래에 고정하고, 위쪽 경계를 드래그해 높이를 조절합니다. 고정 경계를 선택한 뒤 방향키로도 조절할 수 있습니다. 접힘·고정·높이는 작업폴더 설정 파일에 자동 저장되며 설정창에서도 조절할 수 있습니다.</p><p>설정에서 글자·아이콘·표 행 높이·요약줄 크기·테마·선·점·격자·여백을 조절합니다. 저장 및 닫기는 작업폴더에 저장하며 취소는 이전 설정으로 복원합니다. 오프라인은 CSVtoGraphViewer.html을 Chrome/Edge로 열어 사용하세요. CSV 처리는 브라우저 안에서 수행합니다.</p></section>
 <footer class="helpCredits"><p>최초배포자:이상범(sangbum.lee@ligdna.com)</p><p>마음대로 수정 배포가능합니다</p></footer>`;
@@ -6619,9 +6620,9 @@ $('reset').title = '내보내기 폴더의 PNG·CSV 저장 파일 목록과 미�
 </script>
     <script>
 window.CSV_GRAPH_BUILD = {
-  "version": "1.0.20",
-  "built_at": "2026-10-28T23:28:10+09:00",
-  "source_hash": "87a3e730fa690cd4c871e05a8881840aa00de304c263bd28013fc793efae774a"
+  "version": "1.0.25",
+  "built_at": "2026-10-29T10:44:03+09:00",
+  "source_hash": "96e9c7a63efd08faa536b227453559777f2371fc611891eae6167eeb2792f602"
 };
 
 </script>
@@ -7149,6 +7150,37 @@ function startDetachedCsvViewer(payload) {
         color: #146b60;
         margin-left: 10px;
       }
+      #referencePanel {
+        flex: 0 0 auto;
+        border-top: 2px solid #217b71;
+        background: #f0faf6;
+        max-height: 35dvh;
+        overflow: auto;
+      }
+      #referencePanel[hidden],
+      #rowMenu[hidden] {
+        display: none;
+      }
+      #referencePanel h2 {
+        margin: 0;
+        padding: 8px 12px;
+        font-size: 14px;
+      }
+      #referencePanel th {
+        background: #dcefe8;
+      }
+      #referencePanel td:first-child {
+        text-align: left;
+      }
+      #rowMenu {
+        position: fixed;
+        z-index: 20;
+        padding: 6px;
+        border: 1px solid #8aaba4;
+        border-radius: 6px;
+        background: white;
+        box-shadow: 0 4px 18px #0003;
+      }
       #grid {
         flex: 1;
         min-height: 0;
@@ -7302,6 +7334,14 @@ function startDetachedCsvViewer(payload) {
     </header>
     <div class="toolbar">
       <label>
+        <input
+          id="followGraph"
+          type="checkbox"
+          checked
+        />
+        그래프 선택 연동
+      </label>
+      <label>
         파일
         <select id="files"></select>
       </label>
@@ -7355,6 +7395,7 @@ function startDetachedCsvViewer(payload) {
         px
       </label>
       <button id="copyRow">선택 행 복사</button>
+      <button id="pinRow">선택 행 참고 고정</button>
       <button
         id="saveCsv"
         title="현재 검색·필터·정렬·표시 열을 반영하여 다운로드합니다."
@@ -7396,6 +7437,29 @@ function startDetachedCsvViewer(payload) {
       </label>
       <span class="note">열 제목의 ▾: 고유값·체크 필터·정렬 / 셀 클릭: 행 선택</span>
     </div>
+    <section
+      id="referencePanel"
+      aria-label="고정 참고행 비교"
+      hidden
+    >
+      <h2>
+        고정 참고행
+        <button id="clearReferences">모두 해제</button>
+      </h2>
+      <div id="referenceRows"></div>
+    </section>
+    <div
+      id="rowMenu"
+      role="menu"
+      hidden
+    >
+      <button
+        id="contextPin"
+        role="menuitem"
+      >
+        참고행 고정
+      </button>
+    </div>
     <div
       id="filterMenu"
       role="dialog"
@@ -7412,6 +7476,120 @@ function startDetachedCsvViewer(payload) {
     editor = null,
     searchTimer = null;
   const source = () => files[current];
+  let referenceRows = [],
+    contextRow = null,
+    localFileSerial = 0;
+  function referenceKey(file, row) {
+    return file.referenceId + ':' + row;
+  }
+  function toggleReference(file, row) {
+    if (!file || !Number.isInteger(row) || !file.rows[row]) return;
+    const key = referenceKey(file, row),
+      index = referenceRows.findIndex((entry) => entry.key === key);
+    if (index >= 0) referenceRows.splice(index, 1);
+    else
+      referenceRows.push({
+        key,
+        name: file.name,
+        row,
+        headers: [...file.headers],
+        values: [...file.rows[row]],
+      });
+    renderReferences();
+    $('rowMenu').hidden = true;
+    status(
+      index >= 0 ? '참고행 고정 해제' : '원본 ' + (row + 1) + '행을 하단 참고행에 고정했습니다.',
+    );
+  }
+  function renderReferences() {
+    $('referencePanel').hidden = !referenceRows.length;
+    const columns = [],
+      seen = new Set();
+    const fields = (headers) =>
+      headers.map((name, i) => ({
+        name,
+        key: JSON.stringify([name, headers.slice(0, i).filter((h) => h === name).length]),
+      }));
+    for (const entry of referenceRows)
+      for (const field of fields(entry.headers)) {
+        if (!seen.has(field.key)) {
+          seen.add(field.key);
+          columns.push(field);
+        }
+      }
+    $('referenceRows').innerHTML =
+      '<table><thead><tr><th>파일 / 원본 행</th>' +
+      columns.map((field) => '<th>' + escape(field.name) + '</th>').join('') +
+      '</tr></thead><tbody>' +
+      referenceRows
+        .map((entry, index) => {
+          const values = new Map(
+            fields(entry.headers).map((field, i) => [field.key, entry.values[i]]),
+          );
+          return (
+            '<tr><td><button data-unpin="' +
+            index +
+            '" aria-label="참고행 고정 해제">해제</button> ' +
+            escape(entry.name) +
+            ' / ' +
+            (entry.row + 1) +
+            '행</td>' +
+            columns
+              .map((field) => '<td>' + escape(values.get(field.key) ?? '—') + '</td>')
+              .join('') +
+            '</tr>'
+          );
+        })
+        .join('') +
+      '</tbody></table>';
+    $('referenceRows')
+      .querySelectorAll('[data-unpin]')
+      .forEach((button) => {
+        button.onclick = () => {
+          referenceRows.splice(+button.dataset.unpin, 1);
+          renderReferences();
+        };
+      });
+  }
+  $('clearReferences').onclick = () => {
+    referenceRows = [];
+    renderReferences();
+  };
+  $('pinRow').onclick = () => toggleReference(source(), source()?.picked);
+  $('contextPin').onclick = () => {
+    if (contextRow) toggleReference(contextRow.file, contextRow.row);
+  };
+  $('grid').addEventListener('contextmenu', (event) => {
+    const row = event.target.closest('tr[data-row]');
+    if (!row || !source()) return;
+    event.preventDefault();
+    closeFilter();
+    contextRow = { file: source(), row: +row.dataset.row };
+    $('contextPin').textContent = referenceRows.some(
+      (entry) => entry.key === referenceKey(contextRow.file, contextRow.row),
+    )
+      ? '참고행 고정 해제'
+      : '참고행 고정';
+    const menu = $('rowMenu');
+    menu.hidden = false;
+    menu.style.left =
+      Math.max(4, Math.min(event.clientX, innerWidth - menu.offsetWidth - 4)) + 'px';
+    menu.style.top =
+      Math.max(4, Math.min(event.clientY, innerHeight - menu.offsetHeight - 4)) + 'px';
+    $('contextPin').focus({ preventScroll: true });
+  });
+  document.addEventListener('pointerdown', (event) => {
+    if (!$('rowMenu').contains(event.target)) $('rowMenu').hidden = true;
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') $('rowMenu').hidden = true;
+  });
+  window.addEventListener('resize', () => {
+    $('rowMenu').hidden = true;
+  });
+  $('grid').addEventListener('scroll', () => {
+    $('rowMenu').hidden = true;
+  });
   const status = (message) => {
     $('status').textContent = message;
   };
@@ -7421,6 +7599,7 @@ function startDetachedCsvViewer(payload) {
   function loadSnapshot(snapshot) {
     files = snapshot.files.map((file) => ({
       ...file,
+      referenceId: 'main-' + file.sourceId,
       filters: new Map((file.filters || []).map(([col, values]) => [col, new Set(values)])),
       visible: new Set(file.headers.map((_, i) => i)),
       search: '',
@@ -7435,6 +7614,30 @@ function startDetachedCsvViewer(payload) {
     status('별도 창으로 불러왔습니다.');
   }
   window.loadCsvViewerSnapshot = loadSnapshot;
+  let latestGraphPick = null;
+  window.followCsvGraphPick = (pick) => {
+    latestGraphPick = pick;
+    if (!$('followGraph').checked) return;
+    const index = files.findIndex((file) => file.sourceId === pick.sourceId);
+    if (index < 0 || !files[index].rows[pick.localRow]) return;
+    current = index;
+    const file = source();
+    file.picked = pick.localRow;
+    file.pickedColumns = [...pick.columns];
+    // Reveal the selected record even if a local search or filter hid it.
+    file.search = '';
+    for (const [col, values] of file.filters) {
+      if (!values.has(file.rows[pick.localRow][col])) file.filters.delete(col);
+    }
+    pick.columns.forEach((col) => file.visible.add(col));
+    renderFiles();
+    renderColumns();
+    render(true);
+    status('그래프 연동: 원본 ' + (pick.localRow + 1) + '행 · 선택을 가린 검색·필터 해제');
+  };
+  $('followGraph').onchange = () => {
+    if ($('followGraph').checked && latestGraphPick) window.followCsvGraphPick(latestGraphPick);
+  };
 
   function renderFiles() {
     $('files').innerHTML = files
@@ -7508,6 +7711,12 @@ function startDetachedCsvViewer(payload) {
         header = $('grid').querySelector('thead').getBoundingClientRect().height;
       $('grid').scrollTop +=
         rect.top + rect.height / 2 - outer.top - header - ($('grid').clientHeight - header) / 2;
+      const cell = row.querySelector('.picked-cell');
+      if (cell) {
+        const bounds = cell.getBoundingClientRect();
+        $('grid').scrollLeft +=
+          bounds.left + bounds.width / 2 - outer.left - $('grid').clientWidth / 2;
+      }
     });
   }
   function render(reveal = false) {
@@ -7515,9 +7724,23 @@ function startDetachedCsvViewer(payload) {
     clearTimeout(searchTimer);
     const file = source(),
       size = +$('pageSize').value;
+    for (const id of [
+      'files',
+      'search',
+      'clear',
+      'goRow',
+      'goPage',
+      'prev',
+      'next',
+      'copyRow',
+      'pinRow',
+      'saveCsv',
+    ])
+      $(id).disabled = !file;
     if (!file) {
       $('grid').innerHTML = '<p class="empty">CSV 파일을 열어 주세요.</p>';
-      $('saveCsv').disabled = true;
+      $('counts').textContent = '열린 CSV 없음 · CSV 추가 열기로 파일을 선택하세요.';
+      $('pageInfo').textContent = '';
       return;
     }
     rowIds = matchingRows();
@@ -7577,6 +7800,7 @@ function startDetachedCsvViewer(payload) {
     $('rowJump').max = String(file.rows.length);
     $('prev').disabled = page === 0;
     $('next').disabled = page >= pages - 1;
+    $('pinRow').disabled = file.picked === null;
     $('copyRow').disabled = !cols.length || file.picked === null || !rowIds.includes(file.picked);
     $('saveCsv').disabled = !cols.length;
     if (reveal) revealPicked();
@@ -7688,6 +7912,7 @@ function startDetachedCsvViewer(payload) {
     render(true);
   };
   $('search').oninput = () => {
+    if (!source()) return;
     source().search = $('search').value;
     page = 0;
     clearTimeout(searchTimer);
@@ -7695,6 +7920,7 @@ function startDetachedCsvViewer(payload) {
   };
   $('clear').onclick = () => {
     const file = source();
+    if (!file) return;
     file.filters.clear();
     file.sort = null;
     file.search = '';
@@ -7731,7 +7957,7 @@ function startDetachedCsvViewer(payload) {
   $('goRow').onclick = () => {
     const value = +$('rowJump').value,
       file = source();
-    if (!Number.isInteger(value) || value < 1 || value > file.rows.length)
+    if (!file || !Number.isInteger(value) || value < 1 || value > file.rows.length)
       return status('원본 데이터 행 번호를 입력하세요.');
     if (!matchingRows().includes(value - 1))
       return status('해당 행은 검색·필터로 숨겨져 있습니다. 초기화 후 이동하세요.');
@@ -7828,6 +8054,7 @@ function startDetachedCsvViewer(payload) {
           sort: null,
           visible: new Set(headers.map((_, i) => i)),
           search: '',
+          referenceId: 'local-' + ++localFileSerial,
           picked: null,
           pickedColumns: [],
         });
@@ -7860,12 +8087,12 @@ previewPin.before(detachedCsvButton);
 detachedCsvButton.onclick = (event) => {
   event.preventDefault();
   event.stopPropagation();
-  if (!csvSources.length) return notice('CSV 파일을 먼저 불러오세요.');
   const payload = {
     current: Math.max(0, csvSources.indexOf(previewSource)),
     files: csvSources.map((source) => {
       const state = previewTableState(source);
       return {
+        sourceId: detachedSourceId(source),
         name: sourceLabel(source),
         headers: [...source.head],
         rows: source.data.map((row) => [...row]),
@@ -7908,6 +8135,35 @@ detachedCsvButton.onclick = (event) => {
     ')(window.csvViewerPayload);';
   popup.document.body.append(script);
 };
+
+// Stable object identities prevent a replaced CSV with the same name from receiving old picks.
+const detachedSourceIds = new WeakMap();
+let detachedSourceSerial = 0;
+function detachedSourceId(source) {
+  if (!detachedSourceIds.has(source)) detachedSourceIds.set(source, ++detachedSourceSerial);
+  return detachedSourceIds.get(source);
+}
+const priorDetachedPreviewHit = showPreviewHit;
+showPreviewHit = function (hit) {
+  priorDetachedPreviewHit(hit);
+  if (!validPreviewPick(hit)) return;
+  if (detachedCsvWindow && !detachedCsvWindow.closed) {
+    detachedCsvWindow.followCsvGraphPick?.({
+      sourceId: detachedSourceId(hit.source),
+      localRow: hit.localRow,
+      columns: [...hit.columns],
+    });
+  }
+};
+
+const dataCsvViewerButton = document.createElement('button');
+dataCsvViewerButton.id = 'dataCsvSeparateWindow';
+dataCsvViewerButton.type = 'button';
+dataCsvViewerButton.className = 'sidebarAction';
+dataCsvViewerButton.textContent = 'CSV 별도 보기';
+dataCsvViewerButton.title = '열린 CSV를 별도 창에서 보고 추가 CSV도 열 수 있습니다.';
+csvActions.append(dataCsvViewerButton);
+dataCsvViewerButton.onclick = () => detachedCsvButton.click();
 
 </script>
     <script>
@@ -8387,6 +8643,521 @@ renderColumns();
 const commonConditionHeading = analysisControls.querySelector('.panelhead');
 if (commonConditionHeading?.firstChild)
   commonConditionHeading.firstChild.textContent = '파일 공통 조건 ';
+
+</script>
+    <script>
+// An independent numeric snapshot: zooming here never changes the main graph.
+function startDetachedGraph(snapshot) {
+  document.title = '신호 그래프 별도 보기';
+  document.documentElement.lang = 'ko';
+  document.head.innerHTML = /* HTML */ `
+    <meta charset="utf-8" />
+    <title>신호 그래프 별도 보기</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #101827;
+        color: #e2e8f0;
+        font: 14px system-ui;
+        height: 100dvh;
+        display: flex;
+        flex-direction: column;
+      }
+      header {
+        padding: 12px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      button,
+      select {
+        padding: 8px 12px;
+        background: #25354c;
+        border: 1px solid #64748b;
+        border-radius: 5px;
+        color: inherit;
+        cursor: pointer;
+      }
+      button.on {
+        background: #215ba4;
+      }
+      #viewport {
+        overflow: auto;
+        flex: 1;
+        min-height: 240px;
+      }
+      canvas {
+        display: block;
+        touch-action: none;
+      }
+      #note {
+        padding: 8px 14px;
+        white-space: pre-wrap;
+      }
+      #legend {
+        padding: 0 14px 8px;
+        overflow-wrap: anywhere;
+        max-height: 15dvh;
+        overflow: auto;
+      }
+      h1 {
+        font-size: 17px;
+        margin: 0 10px 0 0;
+      }
+    </style>
+  `;
+  document.body.innerHTML = /* HTML */ `
+    <header>
+      <h1>신호 그래프 별도 보기</h1>
+      <button id="refresh">메인에서 다시 가져오기</button>
+      <button id="auto">축범위 자동</button>
+      <button
+        id="zoom"
+        class="on"
+      >
+        영역 확대
+      </button>
+      <button id="pan">이동</button>
+      <button id="in">＋ 확대</button>
+      <button id="out">－ 축소</button>
+      <label>
+        <input
+          id="split"
+          type="checkbox"
+        />
+        개별 그래프
+      </label>
+      <button id="png">PNG 저장</button>
+    </header>
+    <div id="legend"></div>
+    <div id="viewport"><canvas id="graph"></canvas></div>
+    <div id="note">
+      휠: 확대·축소 / 드래그: 영역 확대 또는 이동 / 3D 드래그: 회전 / 두 번 클릭: 초기화
+    </div>
+  `;
+  const $ = (id) => document.getElementById(id),
+    canvas = $('graph');
+  let data,
+    rangeX,
+    rangeY,
+    panels = [],
+    gesture = null,
+    moving = false;
+  let yaw = 0.65,
+    pitch = 0.45,
+    scale = 1,
+    offset = [0, 0];
+  let hits = [],
+    saveCount = 0;
+  const extent = (values) => {
+    let min = Infinity,
+      max = -Infinity;
+    for (const value of values)
+      if (Number.isFinite(value)) {
+        min = Math.min(min, value);
+        max = Math.max(max, value);
+      }
+    if (!Number.isFinite(min)) return [0, 1];
+    return min === max ? [min - 1, max + 1] : [min, max];
+  };
+  const format = (value) => Number(value.toPrecision(6)).toString();
+  function reset() {
+    rangeX = [...data.xRange];
+    rangeY = data.yRange?.slice() || null;
+    yaw = data.yaw;
+    pitch = data.pitch;
+    scale = data.scale;
+    offset = [0, 0];
+    draw();
+  }
+  window.loadGraphSnapshot = (value) => {
+    data = value;
+    $('split').checked = data.split;
+    $('split').disabled = data.dimension === '3d';
+    $('legend').replaceChildren(
+      ...data.series.map((series) => {
+        const label = document.createElement('span');
+        label.textContent = '● ' + series.name + '  ';
+        label.style.color = series.color;
+        return label;
+      }),
+    );
+    saveCount = 0;
+    reset();
+  };
+  function draw() {
+    const w = Math.max(360, $('viewport').clientWidth),
+      count = data.dimension === '2d' && $('split').checked ? Math.max(1, data.series.length) : 1;
+    const h = Math.max(350, $('viewport').clientHeight, count * 260),
+      dpr = devicePixelRatio || 1;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    ctx.fillStyle = '#101827';
+    ctx.fillRect(0, 0, w, h);
+    ctx.font = '12px system-ui';
+    panels = [];
+    hits = [];
+    if (data.dimension === '3d') {
+      const ranges = [0, 1, 2].map((i) => extent(data.series[0]?.points.map((p) => p.v[i]) || []));
+      const project = (v) => {
+        const n = v.map(
+          (value, i) => ((value - ranges[i][0]) / (ranges[i][1] - ranges[i][0])) * 2 - 1,
+        );
+        const a = n[0] * Math.cos(yaw) - n[2] * Math.sin(yaw),
+          b = n[0] * Math.sin(yaw) + n[2] * Math.cos(yaw);
+        return [
+          w / 2 + a * Math.min(w, h) * 0.29 * scale + offset[0],
+          h / 2 -
+            (n[1] * Math.cos(pitch) - b * Math.sin(pitch)) * Math.min(w, h) * 0.29 * scale +
+            offset[1],
+        ];
+      };
+      ctx.strokeStyle = '#64748b';
+      for (let i = 0; i < 3; i++) {
+        const a = ranges.map((r) => r[0]),
+          b = [...a];
+        b[i] = ranges[i][1];
+        const p = project(a),
+          q = project(b);
+        ctx.beginPath();
+        ctx.moveTo(...p);
+        ctx.lineTo(...q);
+        ctx.stroke();
+        ctx.fillStyle = '#e2e8f0';
+        ctx.fillText(data.axes[i], q[0] + 5, q[1]);
+      }
+      for (const s of data.series) paint(s, (p) => project(p.v));
+    } else {
+      for (let k = 0; k < count; k++) {
+        const series = $('split').checked ? [data.series[k]].filter(Boolean) : data.series;
+        const yr =
+          rangeY ||
+          extent(
+            series.flatMap((s) =>
+              s.points.filter((p) => p.v[0] >= rangeX[0] && p.v[0] <= rangeX[1]).map((p) => p.v[1]),
+            ),
+          );
+        const p = {
+          left: 85,
+          right: w - 25,
+          top: (k * h) / count + 30,
+          bottom: ((k + 1) * h) / count - 45,
+          xr: rangeX,
+          yr,
+        };
+        panels.push(p);
+        const project = (v) => [
+          p.left + ((v[0] - rangeX[0]) / (rangeX[1] - rangeX[0])) * (p.right - p.left),
+          p.bottom - ((v[1] - yr[0]) / (yr[1] - yr[0])) * (p.bottom - p.top),
+        ];
+        ctx.strokeStyle = '#334155';
+        ctx.fillStyle = '#cbd5e1';
+        for (let t = 0; t <= 5; t++) {
+          const x = p.left + ((p.right - p.left) * t) / 5,
+            y = p.bottom - ((p.bottom - p.top) * t) / 5;
+          ctx.beginPath();
+          ctx.moveTo(x, p.top);
+          ctx.lineTo(x, p.bottom);
+          ctx.moveTo(p.left, y);
+          ctx.lineTo(p.right, y);
+          ctx.stroke();
+          ctx.fillText(
+            format(rangeX[0] + ((rangeX[1] - rangeX[0]) * t) / 5),
+            x - 16,
+            p.bottom + 20,
+          );
+          ctx.fillText(format(yr[0] + ((yr[1] - yr[0]) * t) / 5), 4, y + 4);
+        }
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(p.left, p.top, p.right - p.left, p.bottom - p.top);
+        ctx.clip();
+        for (const s of series) paint(s, (point) => project(point.v), p);
+        ctx.restore();
+      }
+    }
+    if (gesture?.end && !gesture.move && data.dimension === '2d') {
+      const [x, y] = gesture.start,
+        [endX, endY] = gesture.end;
+      ctx.fillStyle = '#60a5fa33';
+      ctx.strokeStyle = '#60a5fa';
+      ctx.lineWidth = 1;
+      ctx.fillRect(x, y, endX - x, endY - y);
+      ctx.strokeRect(x, y, endX - x, endY - y);
+    }
+    function paint(series, project, bounds = { left: 0, right: w, top: 0, bottom: h }) {
+      ctx.strokeStyle = series.color;
+      ctx.fillStyle = series.color;
+      ctx.lineWidth = data.lineWidth;
+      let previous = null;
+      for (const point of series.points) {
+        if (!point.v.every(Number.isFinite)) {
+          previous = null;
+          continue;
+        }
+        const xy = project(point);
+        if (previous && data.style !== 'scatter') {
+          ctx.beginPath();
+          ctx.moveTo(...previous);
+          ctx.lineTo(...xy);
+          ctx.stroke();
+        }
+        if (data.style !== 'line') {
+          ctx.beginPath();
+          ctx.arc(...xy, data.pointSize, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        if (
+          xy[0] >= bounds.left &&
+          xy[0] <= bounds.right &&
+          xy[1] >= bounds.top &&
+          xy[1] <= bounds.bottom
+        )
+          hits.push({ xy, point, name: series.name });
+        previous = xy;
+      }
+    }
+  }
+  const position = (e) => {
+    const r = canvas.getBoundingClientRect();
+    return [e.clientX - r.left, e.clientY - r.top];
+  };
+  const panelAt = (xy) =>
+    panels.find((p) => xy[0] >= p.left && xy[0] <= p.right && xy[1] >= p.top && xy[1] <= p.bottom);
+  const world = (xy, p) => [
+    p.xr[0] + ((xy[0] - p.left) / (p.right - p.left)) * (p.xr[1] - p.xr[0]),
+    p.yr[1] - ((xy[1] - p.top) / (p.bottom - p.top)) * (p.yr[1] - p.yr[0]),
+  ];
+  function zoom(factor, xy) {
+    if (data.dimension === '3d') scale = Math.max(0.05, Math.min(100, scale / factor));
+    else {
+      const p = panelAt(xy || []) || panels[0];
+      if (!p) return;
+      const center = xy ? world(xy, p) : [(p.xr[0] + p.xr[1]) / 2, (p.yr[0] + p.yr[1]) / 2];
+      rangeX = p.xr.map((v) => center[0] + (v - center[0]) * factor);
+      rangeY = p.yr.map((v) => center[1] + (v - center[1]) * factor);
+    }
+    draw();
+  }
+  canvas.addEventListener(
+    'wheel',
+    (e) => {
+      e.preventDefault();
+      zoom(e.deltaY > 0 ? 1.2 : 1 / 1.2, position(e));
+    },
+    { passive: false },
+  );
+  canvas.onpointerdown = (e) => {
+    if (e.button !== 0 && e.button !== 1) return;
+    e.preventDefault();
+    const xy = position(e),
+      p = panelAt(xy);
+    gesture = {
+      id: e.pointerId,
+      start: xy,
+      p,
+      move: moving || e.button === 1,
+      x: rangeX.slice(),
+      y: p?.yr.slice(),
+      yaw,
+      pitch,
+      offset: [...offset],
+    };
+    canvas.setPointerCapture(e.pointerId);
+  };
+  canvas.onpointermove = (e) => {
+    const xy = position(e);
+    if (gesture) {
+      const g = gesture,
+        dx = xy[0] - g.start[0],
+        dy = xy[1] - g.start[1];
+      if (data.dimension === '3d') {
+        if (g.move) offset = [g.offset[0] + dx, g.offset[1] + dy];
+        else {
+          yaw = g.yaw + dx * 0.01;
+          pitch = g.pitch + dy * 0.01;
+        }
+        draw();
+      } else if (g.move && g.p) {
+        rangeX = g.x.map((v) => v - (dx / (g.p.right - g.p.left)) * (g.x[1] - g.x[0]));
+        rangeY = g.y.map((v) => v + (dy / (g.p.bottom - g.p.top)) * (g.y[1] - g.y[0]));
+        draw();
+      } else if (g.p) {
+        g.end = xy;
+        draw();
+      }
+      return;
+    }
+    let best = null,
+      distance = 144;
+    for (const hit of hits) {
+      const d = (hit.xy[0] - xy[0]) ** 2 + (hit.xy[1] - xy[1]) ** 2;
+      if (d < distance) {
+        best = hit;
+        distance = d;
+      }
+    }
+    $('note').textContent = best
+      ? best.name +
+        ' · ' +
+        best.point.v.map((v, i) => (data.axes[i] || 'Y') + ': ' + format(v)).join(' · ') +
+        ' · 원본 ' +
+        (best.point.row + 1) +
+        '행'
+      : '휠: 확대·축소 / 드래그: 영역 확대·이동 / 3D: 회전 / 두 번 클릭: 초기화';
+  };
+  canvas.onpointerup = (e) => {
+    const g = gesture;
+    if (!g) return;
+    gesture = null;
+    const xy = position(e);
+    if (data.dimension === '2d' && !g.move && g.p && Math.abs(xy[0] - g.start[0]) > 5) {
+      const a = world(g.start, g.p),
+        b = world(xy, g.p);
+      rangeX = [Math.min(a[0], b[0]), Math.max(a[0], b[0])];
+      if (Math.abs(xy[1] - g.start[1]) > 5) rangeY = [Math.min(a[1], b[1]), Math.max(a[1], b[1])];
+      draw();
+    } else if (Math.hypot(xy[0] - g.start[0], xy[1] - g.start[1]) < 4) {
+      let best = null,
+        distance = 324;
+      for (const hit of hits) {
+        const d = (hit.xy[0] - xy[0]) ** 2 + (hit.xy[1] - xy[1]) ** 2;
+        if (d < distance) {
+          best = hit;
+          distance = d;
+        }
+      }
+      if (best) window.onGraphPick?.(best.point);
+    }
+  };
+  canvas.onpointercancel = canvas.onlostpointercapture = () => {
+    gesture = null;
+    draw();
+  };
+  canvas.ondblclick = reset;
+  $('auto').onclick = () => {
+    data.xRange = extent(data.series.flatMap((s) => s.points.map((p) => p.v[0])));
+    data.yRange = null;
+    data.scale = 1;
+    reset();
+  };
+  $('zoom').onclick = () => {
+    moving = false;
+    $('zoom').classList.add('on');
+    $('pan').classList.remove('on');
+  };
+  $('pan').onclick = () => {
+    moving = true;
+    $('pan').classList.add('on');
+    $('zoom').classList.remove('on');
+  };
+  $('in').onclick = () => zoom(1 / 1.2);
+  $('out').onclick = () => zoom(1.2);
+  $('split').onchange = () => {
+    rangeY = null;
+    draw();
+  };
+  $('refresh').onclick = () => window.requestGraphSnapshot?.();
+  $('png').onclick = () =>
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob),
+        a = document.createElement('a');
+      a.href = url;
+      a.download = data.filename.replace(/\.png$/, saveCount ? '(' + saveCount + ').png' : '.png');
+      saveCount++;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    });
+  window.addEventListener('resize', draw);
+  window.loadGraphSnapshot(snapshot);
+}
+
+let detachedGraphWindow = null;
+function graphWindowSnapshot() {
+  const is3 = $('dimension').value === '3d';
+  const visible = previewVisibleRows(),
+    visibleSet = new Set(visible),
+    ids = is3 ? [+$('yaxis3').value] : [...selected];
+  const axes = is3 ? [+$('x').value, +$('yaxis3').value, +$('zaxis').value] : [];
+  return {
+    dimension: is3 ? '3d' : '2d',
+    split: $('layout').value === 'split',
+    axes: is3 ? axes.map((i) => (i === -1 ? '행 순서' : headers[i])) : ['X', 'Y'],
+    xRange: (view || dataX()).slice(),
+    yRange: manualY?.slice(),
+    yaw: angleYaw,
+    pitch: anglePitch,
+    scale: scale3,
+    lineWidth: viewerPrefs.lineWidth,
+    pointSize: viewerPrefs.pointSize,
+    style: $('style').value,
+    filename: currentExportName('png'),
+    series: ids.map((col) => ({
+      name: headers[col],
+      color: palette[col % palette.length],
+      points: (is3 ? visible : seriesRows(col).filter((r) => visibleSet.has(r))).map((r) => ({
+        v: is3
+          ? axes.map((i) => (i === -1 ? r.row._localIndex + 1 : num(r.row[i])))
+          : [point(r), num(r.row[col])],
+        sourceId: detachedSourceId(csvSources[r.row._source]),
+        row: r.row._localIndex,
+        columns: is3
+          ? axes
+              .filter((i) => columnMeta[i]?.source === r.row._source)
+              .map((i) => columnMeta[i].local)
+          : [columnMeta[col].local],
+      })),
+    })),
+  };
+}
+const detachedGraphButton = document.createElement('button');
+detachedGraphButton.id = 'graphSeparateWindow';
+detachedGraphButton.textContent = '그래프 별도 창';
+const detachedGraphLabel = document.createElement('span');
+detachedGraphLabel.className = 'graphActionLabel';
+detachedGraphLabel.append(...detachedGraphButton.childNodes);
+detachedGraphButton.append(detachedGraphLabel);
+$('pan').after(detachedGraphButton);
+graphActionSizer.observe(detachedGraphLabel);
+detachedGraphButton.onclick = () => {
+  if (!rows.length) return notice('CSV 파일을 먼저 불러오세요.');
+  const snapshot = graphWindowSnapshot();
+  if (detachedGraphWindow && !detachedGraphWindow.closed) {
+    detachedGraphWindow.loadGraphSnapshot(snapshot);
+    detachedGraphWindow.focus();
+    return;
+  }
+  const popup = window.open(
+    '',
+    '_blank',
+    'popup,width=1200,height=800,resizable=yes,scrollbars=yes',
+  );
+  if (!popup) return notice('별도 창이 차단되었습니다. 이 사이트의 팝업을 허용해 주세요.');
+  detachedGraphWindow = popup;
+  popup.opener = null;
+  popup.requestGraphSnapshot = () => {
+    if (!window.closed) popup.loadGraphSnapshot(graphWindowSnapshot());
+  };
+  popup.onGraphPick = (point) => {
+    if (window.closed) return;
+    const source = csvSources.find((s) => detachedSourceId(s) === point.sourceId);
+    if (source) showPreviewHit({ source, localRow: point.row, columns: point.columns });
+  };
+  popup.graphSnapshot = snapshot;
+  const script = popup.document.createElement('script');
+  script.textContent =
+    '(' + startDetachedGraph.toString() + ')(window.graphSnapshot);delete window.graphSnapshot;';
+  popup.document.body.append(script);
+};
 
 </script>
   </body>

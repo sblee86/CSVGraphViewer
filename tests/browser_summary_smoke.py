@@ -20,7 +20,7 @@ with sync_playwright() as p:
    if(!['total','filtered','signals','extent','zoom','pan','autoAxisBounds'].every(id=>bar.contains($(id))))throw Error('Missing summary control');
    const centers=[...bar.querySelectorAll('.metrics>div,.mode')].map(e=>{const r=e.getBoundingClientRect();return r.top+r.height/2});
    if(Math.max(...centers)-Math.min(...centers)>2)throw Error('Not one row');
-   if(JSON.stringify([...bar.querySelectorAll('.mode button')].map(b=>b.id))!==JSON.stringify(['autoAxisBounds','applyUserAxisBounds','zoom','pan']))throw Error('Wrong action order');
+   if(JSON.stringify([...bar.querySelectorAll('.mode button')].map(b=>b.id))!==JSON.stringify(['autoAxisBounds','applyUserAxisBounds','zoom','pan','graphSeparateWindow']))throw Error('Wrong action order');
    if([...bar.querySelectorAll('.metrics small')].some(e=>!e.textContent.endsWith(':')))throw Error('Missing metric colon');
    window.originalBarHeight=bar.getBoundingClientRect().height;
    window.settingsText='';workRoot={getFileHandle:async()=>({createWritable:async()=>({write:async text=>settingsText=text,close:async()=>{}}),getFile:async()=>({text:async()=>settingsText})})};
