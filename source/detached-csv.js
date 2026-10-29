@@ -194,7 +194,7 @@ function startDetachedCsvViewer(payload) {
         border: 1px solid #cbd5d9;
         border-radius: 5px;
       }
-      #columnList {
+      #columnChooser {
         position: absolute;
         top: 100%;
         left: 0;
@@ -206,6 +206,44 @@ function startDetachedCsvViewer(payload) {
         z-index: 6;
         padding: 10px;
         box-shadow: 0 5px 15px #0002;
+      }
+      #columnList {
+        max-height: 220px;
+        overflow: auto;
+      }
+      #columnSearch {
+        width: 100%;
+        margin-bottom: 6px;
+      }
+      #columnActions {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+        margin-bottom: 5px;
+      }
+      #resetAll {
+        float: right;
+        margin-left: 12px;
+        border-color: #217b71;
+        font-weight: 600;
+      }
+      mark.search-match {
+        font-weight: 800;
+        background: #ffe28a;
+        color: #8d2400;
+      }
+      #grid .frozen-column {
+        position: sticky;
+        background: #edf8f3;
+        z-index: 2;
+        box-shadow: 2px 0 0 #aac9bd;
+      }
+      #grid th.frozen-column {
+        z-index: 4;
+        background: #d6eee3;
+      }
+      #grid tr.selected-row .frozen-column {
+        background: #fff0da;
       }
       #columnList label {
         display: flex;
@@ -270,6 +308,12 @@ function startDetachedCsvViewer(payload) {
   `;
   document.body.innerHTML = /* HTML */ `
     <header>
+      <button
+        id="resetAll"
+        title="열린 모든 CSV의 검색·값 필터·정렬·열 표시 제한을 해제합니다."
+      >
+        모든 조건·필터 해제
+      </button>
       <h1>CSV 별도 보기</h1>
       <span class="note">
         메인에서 연 파일의 복사본입니다. 여기의 검색·필터·정렬은 그래프와 원본 파일에 영향을 주지
@@ -325,7 +369,20 @@ function startDetachedCsvViewer(payload) {
       <button id="goRow">행 이동</button>
       <details id="columns">
         <summary>표시할 열</summary>
-        <div id="columnList"></div>
+        <div id="columnChooser">
+          <input
+            id="columnSearch"
+            type="search"
+            placeholder="열 이름 검색"
+            aria-label="표시할 열 이름 검색"
+          />
+          <div id="columnActions">
+            <button id="allColumns">모든 열 표시</button>
+            <button id="checkMatchedColumns">검색된 열 체크</button>
+            <button id="uncheckMatchedColumns">검색된 열 해제</button>
+          </div>
+          <div id="columnList"></div>
+        </div>
       </details>
       <label>
         글자
@@ -398,6 +455,13 @@ function startDetachedCsvViewer(payload) {
       hidden
     >
       <button
+        id="contextFreeze"
+        role="menuitem"
+        hidden
+      >
+        열 고정
+      </button>
+      <button
         id="contextPin"
         role="menuitem"
       >
@@ -422,6 +486,7 @@ function startDetachedCsvViewer(payload) {
   const source = () => files[current];
   let referenceRows = [],
     contextRow = null,
+    contextColumn = null,
     localFileSerial = 0;
   function referenceKey(file, row) {
     return file.referenceId + ':' + row;
@@ -505,12 +570,20 @@ function startDetachedCsvViewer(payload) {
   };
   $('grid').addEventListener('contextmenu', (event) => {
     const row = event.target.closest('tr[data-row]');
-    if (!row || !source()) return;
+    const header = event.target.closest('th[data-column]');
+    if ((!row && !header) || !source()) return;
     event.preventDefault();
     closeFilter();
-    contextRow = { file: source(), row: +row.dataset.row };
+    contextRow = row ? { file: source(), row: +row.dataset.row } : null;
+    contextColumn = header ? { file: source(), col: +header.dataset.column } : null;
+    $('contextPin').hidden = !row;
+    $('contextFreeze').hidden = !header;
+    if (header)
+      $('contextFreeze').textContent = source().frozen.has(contextColumn.col)
+        ? '열 고정 해제'
+        : '열 고정 (왼쪽)';
     $('contextPin').textContent = referenceRows.some(
-      (entry) => entry.key === referenceKey(contextRow.file, contextRow.row),
+      (entry) => contextRow && entry.key === referenceKey(contextRow.file, contextRow.row),
     )
       ? '참고행 고정 해제'
       : '참고행 고정';
@@ -520,8 +593,18 @@ function startDetachedCsvViewer(payload) {
       Math.max(4, Math.min(event.clientX, innerWidth - menu.offsetWidth - 4)) + 'px';
     menu.style.top =
       Math.max(4, Math.min(event.clientY, innerHeight - menu.offsetHeight - 4)) + 'px';
-    $('contextPin').focus({ preventScroll: true });
+    $(header ? 'contextFreeze' : 'contextPin').focus({ preventScroll: true });
   });
+  $('contextFreeze').onclick = () => {
+    if (!contextColumn) return;
+    const { file, col } = contextColumn;
+    if (file.frozen.has(col)) file.frozen.delete(col);
+    else file.frozen.add(col);
+    $('rowMenu').hidden = true;
+    render();
+    $('grid').scrollLeft = 0;
+    status('열 고정은 열 제목 우클릭으로 해제할 수 있습니다.');
+  };
   document.addEventListener('pointerdown', (event) => {
     if (!$('rowMenu').contains(event.target)) $('rowMenu').hidden = true;
   });
@@ -547,6 +630,8 @@ function startDetachedCsvViewer(payload) {
       filters: new Map((file.filters || []).map(([col, values]) => [col, new Set(values)])),
       visible: new Set(file.headers.map((_, i) => i)),
       search: '',
+      columnSearch: '',
+      frozen: new Set(),
       picked: file.picked ?? null,
       pickedColumns: file.pickedColumns || [],
     }));
@@ -590,33 +675,98 @@ function startDetachedCsvViewer(payload) {
     $('files').value = String(current);
     $('search').value = source()?.search || '';
   }
-  function renderColumns() {
+  function matchingColumns() {
+    const file = source();
+    return file
+      ? file.headers
+          .map((_, i) => i)
+          .filter((i) =>
+            file.headers[i]
+              .toLocaleLowerCase()
+              .includes((file.columnSearch || '').toLocaleLowerCase()),
+          )
+      : [];
+  }
+  function renderColumnChoices() {
     const file = source();
     $('columnList').innerHTML = file
-      ? '<button id="allColumns">모든 열 표시</button>' +
-        file.headers
+      ? matchingColumns()
           .map(
-            (header, i) =>
-              `<label><input type="checkbox" data-col="${i}" ${file.visible.has(i) ? 'checked' : ''}>${escape(header)}</label>`,
+            (i) =>
+              `<label><input type="checkbox" data-col="${i}" ${file.visible.has(i) ? 'checked' : ''}>${escape(file.headers[i])}</label>`,
           )
-          .join('')
-      : '';
-    if (!file) return;
-    $('allColumns').onclick = () => {
-      file.visible = new Set(file.headers.map((_, i) => i));
-      renderColumns();
+          .join('') || '<p>일치하는 열 없음</p>'
+      : '<p>CSV를 먼저 여세요.</p>';
+    $('columnList')
+      .querySelectorAll('[data-col]')
+      .forEach((input) => {
+        input.onchange = () => {
+          if (input.checked) file.visible.add(+input.dataset.col);
+          else file.visible.delete(+input.dataset.col);
+          render();
+        };
+      });
+  }
+  function renderColumns() {
+    $('columnSearch').value = source()?.columnSearch || '';
+    for (const id of ['columnSearch', 'allColumns', 'checkMatchedColumns', 'uncheckMatchedColumns'])
+      $(id).disabled = !source();
+    renderColumnChoices();
+  }
+  $('columnSearch').oninput = () => {
+    if (!source()) return;
+    source().columnSearch = $('columnSearch').value;
+    renderColumnChoices();
+  };
+  $('allColumns').onclick = () => {
+    if (!source()) return;
+    source().visible = new Set(source().headers.map((_, i) => i));
+    renderColumnChoices();
+    render();
+  };
+  for (const [id, checked] of [
+    ['checkMatchedColumns', true],
+    ['uncheckMatchedColumns', false],
+  ])
+    $(id).onclick = () => {
+      if (!source()) return;
+      for (const col of matchingColumns()) {
+        if (checked) source().visible.add(col);
+        else source().visible.delete(col);
+      }
+      renderColumnChoices();
       render();
     };
-    $('columnList')
-      .querySelectorAll('input')
-      .forEach(
-        (input) =>
-          (input.onchange = () => {
-            if (input.checked) file.visible.add(+input.dataset.col);
-            else file.visible.delete(+input.dataset.col);
-            render();
-          }),
-      );
+  // Match literal text, escaping each fragment before adding markup (including HTML-like CSV cells).
+  function highlightedValue(value, query) {
+    if (!query) return escape(value);
+    const lower = value.toLocaleLowerCase(),
+      term = query.toLocaleLowerCase();
+    let start = 0,
+      result = '',
+      index;
+    while ((index = lower.indexOf(term, start)) !== -1) {
+      result +=
+        escape(value.slice(start, index)) +
+        '<mark class="search-match">' +
+        escape(value.slice(index, index + query.length)) +
+        '</mark>';
+      start = index + query.length;
+    }
+    return result + escape(value.slice(start));
+  }
+  function positionFrozenColumns() {
+    const table = $('grid').querySelector('table');
+    if (!table) return;
+    let left = 0;
+    for (const header of table.querySelectorAll('thead th')) {
+      if (!header.classList.contains('frozen-column')) continue;
+      const index = header.cellIndex;
+      for (const row of table.rows) {
+        row.cells[index].style.left = left + 'px';
+      }
+      left += header.getBoundingClientRect().width;
+    }
   }
   function matchingRows() {
     const file = source();
@@ -656,7 +806,7 @@ function startDetachedCsvViewer(payload) {
       $('grid').scrollTop +=
         rect.top + rect.height / 2 - outer.top - header - ($('grid').clientHeight - header) / 2;
       const cell = row.querySelector('.picked-cell');
-      if (cell) {
+      if (cell && !cell.classList.contains('frozen-column')) {
         const bounds = cell.getBoundingClientRect();
         $('grid').scrollLeft +=
           bounds.left + bounds.width / 2 - outer.left - $('grid').clientWidth / 2;
@@ -672,6 +822,7 @@ function startDetachedCsvViewer(payload) {
       'files',
       'search',
       'clear',
+      'resetAll',
       'goRow',
       'goPage',
       'prev',
@@ -694,13 +845,16 @@ function startDetachedCsvViewer(payload) {
     }
     const pages = Math.max(1, Math.ceil(rowIds.length / size));
     page = Math.max(0, Math.min(page, pages - 1));
-    const cols = file.headers.map((_, i) => i).filter((i) => file.visible.has(i));
+    const cols = file.headers
+      .map((_, i) => i)
+      .filter((i) => file.visible.has(i))
+      .sort((a, b) => Number(file.frozen.has(b)) - Number(file.frozen.has(a)));
     $('grid').innerHTML = cols.length
-      ? '<table><thead><tr><th>원본 행</th>' +
+      ? `<table><thead><tr><th${cols.some((col) => file.frozen.has(col)) ? ' class="frozen-column"' : ''}>원본 행</th>` +
         cols
           .map(
             (col) =>
-              `<th>${escape(file.headers[col])}<button class="column-filter ${file.filters.has(col) ? 'active' : ''}" data-filter="${col}" aria-label="${escape(file.headers[col])} 필터와 정렬">${file.sort?.col === col ? (file.sort.direction === 1 ? '↑' : '↓') : ''}▾</button></th>`,
+              `<th data-column="${col}"${file.frozen.has(col) ? ' class="frozen-column"' : ''} title="우클릭: 열 고정/해제">${file.frozen.has(col) ? '📌 ' : ''}${escape(file.headers[col])}<button class="column-filter ${file.filters.has(col) ? 'active' : ''}" data-filter="${col}" aria-label="${escape(file.headers[col])} 필터와 정렬">${file.sort?.col === col ? (file.sort.direction === 1 ? '↑' : '↓') : ''}▾</button></th>`,
           )
           .join('') +
         '</tr></thead><tbody>' +
@@ -708,11 +862,11 @@ function startDetachedCsvViewer(payload) {
           .slice(page * size, (page + 1) * size)
           .map(
             (row) =>
-              `<tr data-row="${row}" ${file.picked === row ? 'class="selected-row"' : ''}><td>${row + 1}</td>` +
+              `<tr data-row="${row}" ${file.picked === row ? 'class="selected-row"' : ''}><td${cols.some((col) => file.frozen.has(col)) ? ' class="frozen-column"' : ''}>${row + 1}</td>` +
               cols
                 .map(
                   (col) =>
-                    `<td data-cell="${col}" ${file.picked === row && file.pickedColumns.includes(col) ? 'class="picked-cell"' : ''}>${escape(file.rows[row][col])}</td>`,
+                    `<td data-cell="${col}" class="${file.picked === row && file.pickedColumns.includes(col) ? 'picked-cell ' : ''}${file.frozen.has(col) ? 'frozen-column' : ''}">${highlightedValue(file.rows[row][col], file.search)}</td>`,
                 )
                 .join('') +
               '</tr>',
@@ -747,6 +901,7 @@ function startDetachedCsvViewer(payload) {
     $('pinRow').disabled = file.picked === null;
     $('copyRow').disabled = !cols.length || file.picked === null || !rowIds.includes(file.picked);
     $('saveCsv').disabled = !cols.length;
+    positionFrozenColumns();
     if (reveal) revealPicked();
   }
 
@@ -873,6 +1028,23 @@ function startDetachedCsvViewer(payload) {
     render();
     status('검색·필터·정렬 초기화');
   };
+  $('resetAll').onclick = () => {
+    for (const file of files) {
+      file.filters.clear();
+      file.sort = null;
+      file.search = '';
+      file.columnSearch = '';
+      file.visible = new Set(file.headers.map((_, i) => i));
+    }
+    page = 0;
+    $('rowMenu').hidden = true;
+    renderFiles();
+    renderColumns();
+    render();
+    $('grid').scrollTop = 0;
+    status('모든 CSV의 검색·필터·정렬을 해제하고 전체 열과 원본 순서를 복원했습니다.');
+  };
+  window.addEventListener('resize', positionFrozenColumns);
   $('prev').onclick = () => {
     page--;
     render();
@@ -915,7 +1087,10 @@ function startDetachedCsvViewer(payload) {
   };
   $('fontSize').oninput = () => {
     const value = +$('fontSize').value;
-    if (value >= 10 && value <= 24) document.body.style.setProperty('--table-font', value + 'px');
+    if (value >= 10 && value <= 24) {
+      document.body.style.setProperty('--table-font', value + 'px');
+      positionFrozenColumns();
+    }
   };
   document.addEventListener('keydown', (event) => {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
@@ -998,6 +1173,8 @@ function startDetachedCsvViewer(payload) {
           sort: null,
           visible: new Set(headers.map((_, i) => i)),
           search: '',
+          columnSearch: '',
+          frozen: new Set(),
           referenceId: 'local-' + ++localFileSerial,
           picked: null,
           pickedColumns: [],
