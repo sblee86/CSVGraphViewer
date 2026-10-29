@@ -6349,7 +6349,7 @@ helpDialog.innerHTML = `<div class="helpTitle"><h2 id="viewerHelpTitle">CSVGraph
 <section><h3>5. 메인 그래프 조작</h3><p>‘축 범위 자동’ 왼쪽의 ‘신호별 개별 보기’를 체크하면 신호별 그래프로 나뉘고, 해제하면 한 그래프에 겹칩니다. 그래프설정의 배치와 양식 설정에 함께 반영됩니다. 이 기능은 2D에서 사용합니다.</p><p>‘확대’는 왼쪽 드래그로 영역을 확대하고 ‘이동’은 왼쪽 드래그로 화면을 이동합니다. 가운데 버튼 드래그는 항상 이동, 휠은 확대·축소, 더블클릭은 초기 보기입니다. 우측 상단 전체보기는 저장 파일 목록을 엽니다. 3D에서 왼쪽 드래그는 회전입니다. 우클릭 메뉴로 그래프 설정에 바로 갈 수 있습니다. 2D 그래프의 선이나 점에 마우스를 가까이 대면 가장 가까운 신호 하나의 원본 X·Y값과 행 번호만 표시합니다. 빈 영역에서는 숨깁니다. 선 사이 구간에서도 값을 보간하지 않고 가까운 원본 레코드를 표시합니다.</p><p>전체 행은 열린 CSV의 총 레코드 수, 조건 통과 행은 그래프 조건을 통과한 수, 선택 신호는 Y신호 수입니다. X축 보기 범위는 현재 표시하는 최소·최대 X값이며 시간 재생이나 CSV 저장 행 수를 뜻하지 않습니다. 여러 파일은 각 파일의 X열 값을 공통 표시 범위에서 그립니다.</p></section>
 <section><h3>6. 양식 탭</h3><p>원하는 파일·열·그래프 설정 후 이름을 적고 양식을 저장하세요. JSON은 작업폴더/양식/에 저장하며 CSV 자체는 포함하지 않습니다. 양식을 클릭하면 현재 작업폴더에서 상대 경로 또는 유일한 파일명으로 CSV를 찾아 열 이름에 맞추어 그래프를 복원합니다. 중복 파일명이나 없는 파일·열은 안내합니다.</p><p>가져오기는 외부 양식을 작업폴더에 복사합니다. 목록 새로고침으로 변경을 읽으세요. 체크박스와 ‘선택 삭제’는 선택한 양식 JSON을 실제로 삭제합니다. ‘양식 해제’는 저장 파일을 유지하고 현재 적용을 취소하여 기본 2D 분석을 시작합니다.</p></section>
 <section><h3>그래프 별도 창</h3><p>메인 그래프 도구의 그래프 별도 창 버튼은 현재 신호·조건·시간 표시 구간을 복사합니다. 휠과 ＋/－로 확대·축소하고 영역 확대 드래그, 이동, 축범위 자동, 개별 그래프 도구를 사용하세요. 3D는 드래그로 회전하고 이동 모드에서 위치를 옮깁니다. 점을 클릭하면 메인 미리보기와 연동을 켠 CSV 별도 창에 해당 행을 표시합니다. PNG 저장은 현재 별도 그래프 전체를 브라우저 다운로드로 저장합니다. 별도 창 조작은 메인 축 범위를 바꾸지 않습니다. 메인 신호나 조건을 바꾼 뒤에는 메인에서 다시 가져오기를 누르세요. 메인을 닫아도 복사한 그래프와 PNG 저장은 사용할 수 있습니다.</p></section>
-<section><h3>7. 데이터 미리보기</h3><p>그래프 점을 클릭하면 원본 데이터 행과 셀을 찾아 표 내부 스크롤을 가운데로 맞춥니다. 선택 셀은 빨간색, 같은 행은 굵게·1pt 크게 표시합니다. 원본 행 번호를 유지하며 100행씩 페이지를 이동합니다.</p><p>고정 버튼 옆의 별도 창으로 보기로 CSV 전용 창을 열 수 있습니다. 데이터 탭의 CSV 별도 보기 버튼으로도 열 수 있으며, 열린 CSV가 없어도 별도 창의 CSV 추가 열기로 시작할 수 있습니다. 별도 창 상단에서 파일 선택, 전체 검색, 체크 필터와 정렬, 행 이동, 표시 열과 글자 크기 조절, 선택 행 복사, 현재 표 CSV 다운로드를 사용합니다. 표시할 열에서 열 이름을 검색하고 체크박스 또는 검색된 열 체크·해제로 표시 열을 선택합니다. Ctrl+F로 전체 셀을 검색하면 일치하는 부분을 굵은 글씨와 노란 배경으로 표시합니다. 열 제목을 우클릭하고 열 고정 (왼쪽)을 선택하면 해당 열이 왼쪽에 모여 가로 스크롤 중에도 보입니다. 여러 열을 고정할 수 있으며 같은 메뉴에서 해제합니다. 우상단 모든 조건·필터 해제는 열린 모든 CSV의 검색·값 필터·정렬·표시 열 제한을 초기화합니다. 열 고정과 참고행은 유지합니다. 별도 창의 그래프 선택 연동 체크박스를 켜면 메인 또는 별도 그래프에서 클릭한 원본 행과 셀로 이동합니다. 선택 행을 가린 검색·열 필터는 해제하고 숨긴 선택 열도 표시합니다. 체크를 끄면 검색·필터·스크롤을 자유롭게 유지하며 다시 켜면 마지막 선택으로 이동합니다. 값 편집 모드를 체크하면 셀을 눌러 값을 수정할 수 있습니다. Enter 또는 다른 곳 클릭은 적용, Esc는 취소입니다. 행·열 추가는 지원하지 않습니다. 수정 CSV 저장은 필터·숨긴 열과 관계없이 현재 파일의 전체 수정본을 다운로드합니다. 원본 파일과 메인 그래프는 변경하지 않으며, 참고행은 고정 당시 값을 유지합니다. 행을 우클릭하고 참고행 고정을 누르면 하단에 여러 행을 모아 비교합니다. 다른 파일의 행도 함께 고정할 수 있고 검색·정렬·페이지·그래프 선택이 바뀌어도 참고행은 유지됩니다. 참고행의 해제 또는 모두 해제로 취소합니다. 참고행은 창 안의 복사본으로 창을 닫으면 사라집니다. 표 조작은 원본 파일을 바꾸지 않으며, 다시 열기 버튼을 누르면 메인의 최신 표 설정을 불러옵니다.</p><p>열 제목의 ▼에서 고유값·개수 확인, 검색·체크박스 선택, 오름차순·내림차순 정렬을 사용할 수 있습니다. 여러 열 필터는 AND입니다. 이 기능은 표에만 적용하며 그래프나 CSV 내보내기는 바꾸지 않습니다. 그래프에서 선택한 행이 숨겨져 있으면 해당 행을 제외한 표 필터를 안내와 함께 해제합니다.</p></section>
+<section><h3>7. 데이터 미리보기</h3><p>그래프 점을 클릭하면 원본 데이터 행과 셀을 찾아 표 내부 스크롤을 가운데로 맞춥니다. 선택 셀은 빨간색, 같은 행은 굵게·1pt 크게 표시합니다. 원본 행 번호를 유지하며 100행씩 페이지를 이동합니다.</p><p>고정 버튼 옆의 별도 창으로 보기로 CSV 전용 창을 열 수 있습니다. 데이터 탭의 CSV 별도 보기 버튼으로도 열 수 있으며, 열린 CSV가 없어도 별도 창의 CSV 추가 열기로 시작할 수 있습니다. 데이터 탭의 새 CSV 창 추가는 기존 창을 유지하고 창을 하나 더 엽니다. 각 창의 파일 탭으로 CSV를 전환하고 ×로 닫으며, CSV 추가 열기는 현재 창에 파일 탭을 늘립니다. 현재 파일 새 창은 선택한 파일만 복사해 독립 창으로 엽니다. 그래프 선택은 각 창의 연동 체크 상태에 따라 전달됩니다. 우상단 간략히는 창 도구를 작게 표시합니다. 항상 위는 최신 데스크톱 Chrome·Edge의 화면 위 창 기능을 사용하며 동시에 한 개만 가능합니다. 지원되지 않는 브라우저에서는 안내가 표시됩니다. 항상 위를 해제하거나 화면 위 창을 닫으면 기본 창으로 돌아오며 탭·수정값·참고행은 유지됩니다. 별도 창 상단에서 파일 선택, 전체 검색, 체크 필터와 정렬, 행 이동, 표시 열과 글자 크기 조절, 선택 행 복사, 현재 표 CSV 다운로드를 사용합니다. 표시할 열에서 열 이름을 검색하고 체크박스 또는 검색된 열 체크·해제로 표시 열을 선택합니다. Ctrl+F로 전체 셀을 검색하면 일치하는 부분을 굵은 글씨와 노란 배경으로 표시합니다. 열 제목을 우클릭하고 열 고정 (왼쪽)을 선택하면 해당 열이 왼쪽에 모여 가로 스크롤 중에도 보입니다. 여러 열을 고정할 수 있으며 같은 메뉴에서 해제합니다. 우상단 모든 조건·필터 해제는 열린 모든 CSV의 검색·값 필터·정렬·표시 열 제한을 초기화합니다. 열 고정과 참고행은 유지합니다. 별도 창의 그래프 선택 연동 체크박스를 켜면 메인 또는 별도 그래프에서 클릭한 원본 행과 셀로 이동합니다. 선택 행을 가린 검색·열 필터는 해제하고 숨긴 선택 열도 표시합니다. 체크를 끄면 검색·필터·스크롤을 자유롭게 유지하며 다시 켜면 마지막 선택으로 이동합니다. 값 편집 모드를 체크하면 셀을 눌러 값을 수정할 수 있습니다. Enter 또는 다른 곳 클릭은 적용, Esc는 취소입니다. 행·열 추가는 지원하지 않습니다. 수정 CSV 저장은 필터·숨긴 열과 관계없이 현재 파일의 전체 수정본을 다운로드합니다. 원본 파일과 메인 그래프는 변경하지 않으며, 참고행은 고정 당시 값을 유지합니다. 행을 우클릭하고 참고행 고정을 누르면 하단에 여러 행을 모아 비교합니다. 다른 파일의 행도 함께 고정할 수 있고 검색·정렬·페이지·그래프 선택이 바뀌어도 참고행은 유지됩니다. 참고행의 해제 또는 모두 해제로 취소합니다. 참고행은 창 안의 복사본으로 창을 닫으면 사라집니다. 표 조작은 원본 파일을 바꾸지 않으며, 다시 열기 버튼을 누르면 메인의 최신 표 설정을 불러옵니다.</p><p>열 제목의 ▼에서 고유값·개수 확인, 검색·체크박스 선택, 오름차순·내림차순 정렬을 사용할 수 있습니다. 여러 열 필터는 AND입니다. 이 기능은 표에만 적용하며 그래프나 CSV 내보내기는 바꾸지 않습니다. 그래프에서 선택한 행이 숨겨져 있으면 해당 행을 제외한 표 필터를 안내와 함께 해제합니다.</p></section>
 <section><h3>8. PNG 저장 · CSV 내보내기</h3><p>작업폴더/내보내기/에 <b>현재날짜_양식명_축데이터명.확장자</b>로 저장합니다. 날짜는 사용 중인 PC의 현지 날짜입니다. 양식 미적용 시 ‘양식없음’, 여러 Y신호 중 첫 번째 선택 신호(3D는 Y열) 하나를 이름에 사용합니다. 같은 이름은 (1), (2)를 붙여 기존 파일을 덮어쓰지 않습니다.</p><p>전체보기에서 PNG·CSV 탭으로 저장 파일을 확인합니다. 파일명을 누르면 아래에 미리보기가 열리고 ‘파일 열기’로 브라우저에서 열 수도 있습니다. 체크박스와 선택 삭제는 내보내기 폴더의 파일을 실제로 삭제합니다.</p><p>PNG는 현재 그래프 이미지입니다. CSV는 그래프 조건을 통과한 행을 저장하며 표 필터·정렬, 화면 확대 범위, T 재생 구간은 CSV 저장 조건이 아닙니다. 여러 파일 CSV는 파일·열 이름을 구분하고 다른 파일의 셀은 빈 값으로 저장합니다.</p></section>
 <section><h3>9. 설정 · 오프라인 사용</h3><p>상단에 버전과 한국 시간 기준 빌드 시각이 표시됩니다. 신호 그래프 제목을 눌러 접거나 펼칠 수 있습니다. 데이터 미리보기 오른쪽 하단 고정으로 메인 영역 아래에 고정하고, 위쪽 경계를 드래그해 높이를 조절합니다. 고정 경계를 선택한 뒤 방향키로도 조절할 수 있습니다. 접힘·고정·높이는 작업폴더 설정 파일에 자동 저장되며 설정창에서도 조절할 수 있습니다.</p><p>설정에서 글자·아이콘·표 행 높이·요약줄 크기·테마·선·점·격자·여백을 조절합니다. 저장 및 닫기는 작업폴더에 저장하며 취소는 이전 설정으로 복원합니다. 오프라인은 CSVtoGraphViewer.html을 Chrome/Edge로 열어 사용하세요. CSV 처리는 브라우저 안에서 수행합니다.</p></section>
 <footer class="helpCredits"><p>최초배포자:이상범(sangbum.lee@ligdna.com)</p><p>마음대로 수정 배포가능합니다</p></footer>`;
@@ -6695,9 +6695,9 @@ $('reset').title = '내보내기 폴더의 PNG·CSV 저장 파일 목록과 미�
 </script>
     <script>
 window.CSV_GRAPH_BUILD = {
-  "version": "1.0.32",
-  "built_at": "2026-10-29T11:17:09+09:00",
-  "source_hash": "75ba057637185a6205120df2186bb673ee2b0943fe7347bfd32cb459e30b0035"
+  "version": "1.0.36",
+  "built_at": "2026-10-29T17:42:52+09:00",
+  "source_hash": "b1a86f88158a12b5fdcca0bfd365b944fe1162def1a560b49fa1fdfd08dae906"
 };
 
 </script>
@@ -7205,6 +7205,57 @@ function startDetachedCsvViewer(payload) {
         align-items: center;
         gap: 5px;
       }
+      .windowTools {
+        float: right;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .csvTabs {
+        display: flex;
+        gap: 4px;
+        overflow-x: auto;
+        flex: 0 0 auto;
+        padding: 6px 10px;
+        background: #e7eeeb;
+      }
+      .csvTab {
+        display: flex;
+        flex: 0 0 auto;
+        border: 1px solid #b7c8c1;
+        border-radius: 5px;
+        background: white;
+      }
+      .csvTab.active {
+        border-color: #217b71;
+        background: #d9eee5;
+      }
+      .csvTab button {
+        background: transparent;
+        border: 0;
+        max-width: 250px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      body.compact header .note,
+      body.compact .pages .note {
+        display: none;
+      }
+      body.compact h1 {
+        font-size: 14px;
+      }
+      body.compact header,
+      body.compact .toolbar {
+        padding: 5px 8px;
+        gap: 4px;
+      }
+      body.compact button,
+      body.compact input,
+      body.compact select {
+        padding: 4px 6px;
+      }
       #files {
         max-width: 320px;
       }
@@ -7448,6 +7499,23 @@ function startDetachedCsvViewer(payload) {
   `;
   document.body.innerHTML = /* HTML */ `
     <header>
+      <div class="windowTools">
+        <label>
+          <input
+            id="alwaysOnTop"
+            type="checkbox"
+          />
+          항상 위
+        </label>
+        <label>
+          <input
+            id="compactView"
+            type="checkbox"
+          />
+          간략히
+        </label>
+        <button id="newCsvWindow">현재 파일 새 창</button>
+      </div>
       <button
         id="resetAll"
         title="열린 모든 CSV의 검색·값 필터·정렬·열 표시 제한을 해제합니다."
@@ -7557,6 +7625,12 @@ function startDetachedCsvViewer(payload) {
         현재 표 CSV 저장
       </button>
     </div>
+    <div
+      id="csvFileTabs"
+      class="csvTabs"
+      role="tablist"
+      aria-label="열린 CSV 파일"
+    ></div>
     <div id="info">
       <span id="counts"></span>
       <span
@@ -7629,7 +7703,85 @@ function startDetachedCsvViewer(payload) {
     ></div>
   `;
 
-  const $ = (id) => document.getElementById(id);
+  let viewerDocument = document,
+    viewerWindow = window;
+  const $ = (id) => viewerDocument.getElementById(id);
+  const documentListeners = [],
+    windowListeners = [];
+  function listenDocument(name, handler) {
+    documentListeners.push([name, handler]);
+    viewerDocument.addEventListener(name, handler);
+  }
+  function listenWindow(name, handler) {
+    windowListeners.push([name, handler]);
+    viewerWindow.addEventListener(name, handler);
+  }
+  function switchViewerDocument(target) {
+    for (const [name, handler] of documentListeners)
+      viewerDocument.removeEventListener(name, handler);
+    for (const [name, handler] of windowListeners) viewerWindow.removeEventListener(name, handler);
+    viewerWindow = target;
+    viewerDocument = target.document;
+    for (const [name, handler] of documentListeners) viewerDocument.addEventListener(name, handler);
+    for (const [name, handler] of windowListeners) viewerWindow.addEventListener(name, handler);
+  }
+  let topWindow = null,
+    restoreTopWindow = null;
+  $('compactView').onchange = () => {
+    viewerDocument.body.classList.toggle('compact', $('compactView').checked);
+    positionFrozenColumns();
+  };
+  $('alwaysOnTop').onchange = async () => {
+    if (!$('alwaysOnTop').checked) {
+      const previous = topWindow;
+      restoreTopWindow?.();
+      previous?.close();
+      return;
+    }
+    if (!window.documentPictureInPicture?.requestWindow) {
+      $('alwaysOnTop').checked = false;
+      status(
+        '이 브라우저는 항상 위 창을 지원하지 않습니다. 최신 데스크톱 Chrome·Edge에서 사용하세요.',
+      );
+      return;
+    }
+    commitCsvEdit();
+    try {
+      const pip = await window.documentPictureInPicture.requestWindow({ width: 900, height: 650 });
+      topWindow = pip;
+      pip.document.documentElement.lang = 'ko';
+      pip.document.head.innerHTML = document.head.innerHTML;
+      pip.document.body.className = document.body.className;
+      pip.document.body.style.cssText = document.body.style.cssText;
+      pip.document.body.replaceChildren(...document.body.childNodes);
+      const placeholder = document.createElement('button');
+      placeholder.textContent = '항상 위 창 닫고 기본 창으로 돌아오기';
+      placeholder.onclick = () => {
+        restoreTopWindow?.();
+        pip.close();
+      };
+      document.body.append(placeholder);
+      switchViewerDocument(pip);
+      restoreTopWindow = () => {
+        if (window.closed || topWindow !== pip) return;
+        commitCsvEdit();
+        document.body.className = pip.document.body.className;
+        document.body.style.cssText = pip.document.body.style.cssText;
+        document.body.replaceChildren(...pip.document.body.childNodes);
+        switchViewerDocument(window);
+        topWindow = null;
+        restoreTopWindow = null;
+        $('alwaysOnTop').checked = false;
+        positionFrozenColumns();
+      };
+      pip.addEventListener('pagehide', restoreTopWindow, { once: true });
+      positionFrozenColumns();
+      status('항상 위 창 · 브라우저에서 동시에 한 개만 사용할 수 있습니다.');
+    } catch (error) {
+      $('alwaysOnTop').checked = false;
+      status('항상 위 창을 열지 못했습니다: ' + error.message);
+    }
+  };
   let files = [],
     current = 0,
     page = 0,
@@ -7794,9 +7946,9 @@ function startDetachedCsvViewer(payload) {
     const menu = $('rowMenu');
     menu.hidden = false;
     menu.style.left =
-      Math.max(4, Math.min(event.clientX, innerWidth - menu.offsetWidth - 4)) + 'px';
+      Math.max(4, Math.min(event.clientX, viewerWindow.innerWidth - menu.offsetWidth - 4)) + 'px';
     menu.style.top =
-      Math.max(4, Math.min(event.clientY, innerHeight - menu.offsetHeight - 4)) + 'px';
+      Math.max(4, Math.min(event.clientY, viewerWindow.innerHeight - menu.offsetHeight - 4)) + 'px';
     $(header ? 'contextFreeze' : 'contextPin').focus({ preventScroll: true });
   });
   $('contextFreeze').onclick = () => {
@@ -7809,13 +7961,13 @@ function startDetachedCsvViewer(payload) {
     $('grid').scrollLeft = 0;
     status('열 고정은 열 제목 우클릭으로 해제할 수 있습니다.');
   };
-  document.addEventListener('pointerdown', (event) => {
+  listenDocument('pointerdown', (event) => {
     if (!$('rowMenu').contains(event.target)) $('rowMenu').hidden = true;
   });
-  document.addEventListener('keydown', (event) => {
+  listenDocument('keydown', (event) => {
     if (event.key === 'Escape') $('rowMenu').hidden = true;
   });
-  window.addEventListener('resize', () => {
+  listenWindow('resize', () => {
     $('rowMenu').hidden = true;
   });
   $('grid').addEventListener('scroll', () => {
@@ -7888,6 +8040,44 @@ function startDetachedCsvViewer(payload) {
       .join('');
     $('files').value = String(current);
     $('search').value = source()?.search || '';
+    $('csvFileTabs').innerHTML = files
+      .map(
+        (file, i) =>
+          `<div class="csvTab ${i === current ? 'active' : ''}"><button role="tab" aria-selected="${i === current}" data-file-tab="${i}" title="${escape(file.name)}">${escape(file.name)}</button><button data-close-tab="${i}" aria-label="${escape(file.name)} 닫기">×</button></div>`,
+      )
+      .join('');
+    $('csvFileTabs')
+      .querySelectorAll('[data-file-tab]')
+      .forEach((button) => {
+        button.onclick = () => {
+          commitCsvEdit();
+          current = +button.dataset.fileTab;
+          page = 0;
+          renderFiles();
+          renderColumns();
+          render(true);
+        };
+      });
+    $('csvFileTabs')
+      .querySelectorAll('[data-close-tab]')
+      .forEach((button) => {
+        button.onclick = () => {
+          commitCsvEdit();
+          const index = +button.dataset.closeTab;
+          if (
+            files[index].unsaved &&
+            !viewerWindow.confirm('저장하지 않은 수정값이 있습니다. 이 파일 탭을 닫을까요?')
+          )
+            return;
+          files.splice(index, 1);
+          if (index < current) current--;
+          current = Math.max(0, Math.min(current, files.length - 1));
+          page = 0;
+          renderFiles();
+          renderColumns();
+          render();
+        };
+      });
   }
   function matchingColumns() {
     const file = source();
@@ -8011,7 +8201,7 @@ function startDetachedCsvViewer(payload) {
     return ids;
   }
   function revealPicked() {
-    requestAnimationFrame(() => {
+    viewerWindow.requestAnimationFrame(() => {
       const row = $('grid').querySelector('.selected-row');
       if (!row) return;
       const outer = $('grid').getBoundingClientRect(),
@@ -8047,6 +8237,7 @@ function startDetachedCsvViewer(payload) {
       'saveCsv',
       'saveEditedCsv',
       'csvEditMode',
+      'newCsvWindow',
     ])
       $(id).disabled = !file;
     if (!file) {
@@ -8217,16 +8408,18 @@ function startDetachedCsvViewer(payload) {
     paintValues();
     const rect = button.getBoundingClientRect(),
       menu = $('filterMenu');
-    menu.style.left = Math.max(6, Math.min(rect.left, innerWidth - menu.offsetWidth - 6)) + 'px';
+    menu.style.left =
+      Math.max(6, Math.min(rect.left, viewerWindow.innerWidth - menu.offsetWidth - 6)) + 'px';
     menu.style.top =
-      Math.max(6, Math.min(rect.bottom + 4, innerHeight - menu.offsetHeight - 6)) + 'px';
+      Math.max(6, Math.min(rect.bottom + 4, viewerWindow.innerHeight - menu.offsetHeight - 6)) +
+      'px';
     $('valueSearch').focus({ preventScroll: true });
   }
 
   $('files').onchange = () => {
     current = +$('files').value;
     page = 0;
-    $('search').value = source().search;
+    renderFiles();
     renderColumns();
     render(true);
   };
@@ -8264,7 +8457,7 @@ function startDetachedCsvViewer(payload) {
     $('grid').scrollTop = 0;
     status('모든 CSV의 검색·필터·정렬을 해제하고 전체 열과 원본 순서를 복원했습니다.');
   };
-  window.addEventListener('resize', positionFrozenColumns);
+  listenWindow('resize', positionFrozenColumns);
   $('prev').onclick = () => {
     page--;
     render();
@@ -8308,23 +8501,23 @@ function startDetachedCsvViewer(payload) {
   $('fontSize').oninput = () => {
     const value = +$('fontSize').value;
     if (value >= 10 && value <= 24) {
-      document.body.style.setProperty('--table-font', value + 'px');
+      viewerDocument.body.style.setProperty('--table-font', value + 'px');
       positionFrozenColumns();
     }
   };
-  document.addEventListener('keydown', (event) => {
+  listenDocument('keydown', (event) => {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
       event.preventDefault();
       $('search').focus();
     }
     if (event.key === 'Escape') closeFilter();
   });
-  document.addEventListener('pointerdown', (event) => {
+  listenDocument('pointerdown', (event) => {
     if (!$('filterMenu').contains(event.target) && !event.target.closest('[data-filter]'))
       closeFilter();
     if (!$('columns').contains(event.target)) $('columns').open = false;
   });
-  window.addEventListener('resize', closeFilter);
+  listenWindow('resize', closeFilter);
   $('grid').addEventListener('scroll', closeFilter);
   $('saveEditedCsv').onclick = () => {
     commitCsvEdit();
@@ -8378,7 +8571,7 @@ function startDetachedCsvViewer(payload) {
       else {
         const input = document.createElement('textarea');
         input.value = text;
-        document.body.append(input);
+        viewerDocument.body.append(input);
         input.select();
         const copied = document.execCommand('copy');
         input.remove();
@@ -8388,6 +8581,44 @@ function startDetachedCsvViewer(payload) {
     } catch {
       status('복사하지 못했습니다. 표에서 값을 선택해 Ctrl+C로 복사하세요.');
     }
+  };
+  $('newCsvWindow').onclick = () => {
+    commitCsvEdit();
+    const file = source();
+    if (!file) return;
+    const child = viewerWindow.open(
+      '',
+      '_blank',
+      'popup,width=1100,height=760,resizable=yes,scrollbars=yes',
+    );
+    if (!child) return status('새 CSV 창이 차단되었습니다. 팝업을 허용해 주세요.');
+    child.opener = null;
+    child.csvViewerPayload = {
+      current: 0,
+      files: [
+        {
+          sourceId: file.sourceId,
+          name: file.name,
+          headers: [...file.headers],
+          rows: file.rows.map((row) => [...row]),
+          filters: [...file.filters].map(([col, values]) => [col, [...values]]),
+          sort: file.sort ? { ...file.sort } : null,
+          picked: file.picked,
+          pickedColumns: [...file.pickedColumns],
+        },
+      ],
+    };
+    const script = child.document.createElement('script');
+    script.textContent =
+      'const parseCSV=' +
+      parseCSV.toString() +
+      ';const serializeCSV=' +
+      serializeCSV.toString() +
+      ';(' +
+      startDetachedCsvViewer.toString() +
+      ')(window.csvViewerPayload);';
+    child.document.body.append(script);
+    window.registerCsvViewerChild?.(child);
   };
   $('openFiles').onclick = () => $('localFiles').click();
   $('localFiles').onchange = async (event) => {
@@ -8440,6 +8671,11 @@ function startDetachedCsvViewer(payload) {
 }
 
 let detachedCsvWindow = null;
+const detachedCsvWindows = new Set();
+function registerDetachedCsvWindow(popup) {
+  detachedCsvWindows.add(popup);
+  popup.registerCsvViewerChild = registerDetachedCsvWindow;
+}
 const detachedCsvButton = document.createElement('button');
 detachedCsvButton.id = 'previewSeparateWindow';
 detachedCsvButton.type = 'button';
@@ -8484,6 +8720,7 @@ detachedCsvButton.onclick = (event) => {
   if (!popup)
     return notice('별도 창이 차단되었습니다. 이 사이트의 팝업을 허용한 뒤 다시 눌러 주세요.');
   detachedCsvWindow = popup;
+  registerDetachedCsvWindow(popup);
   popup.opener = null;
   popup.csvViewerPayload = payload;
   const script = popup.document.createElement('script');
@@ -8509,8 +8746,12 @@ const priorDetachedPreviewHit = showPreviewHit;
 showPreviewHit = function (hit) {
   priorDetachedPreviewHit(hit);
   if (!validPreviewPick(hit)) return;
-  if (detachedCsvWindow && !detachedCsvWindow.closed) {
-    detachedCsvWindow.followCsvGraphPick?.({
+  for (const popup of detachedCsvWindows) {
+    if (popup.closed) {
+      detachedCsvWindows.delete(popup);
+      continue;
+    }
+    popup.followCsvGraphPick?.({
       sourceId: detachedSourceId(hit.source),
       localRow: hit.localRow,
       columns: [...hit.columns],
@@ -8526,6 +8767,21 @@ dataCsvViewerButton.textContent = 'CSV 별도 보기';
 dataCsvViewerButton.title = '열린 CSV를 별도 창에서 보고 추가 CSV도 열 수 있습니다.';
 csvActions.append(dataCsvViewerButton);
 dataCsvViewerButton.onclick = () => detachedCsvButton.click();
+
+const additionalCsvButton = document.createElement('button');
+additionalCsvButton.id = 'newDataCsvWindow';
+additionalCsvButton.type = 'button';
+additionalCsvButton.className = 'sidebarAction';
+additionalCsvButton.textContent = '새 CSV 창 추가';
+additionalCsvButton.title =
+  '기존 창을 유지하고 새 CSV 창을 엽니다. 각 창 안에서 파일 탭을 추가할 수 있습니다.';
+csvActions.append(additionalCsvButton);
+additionalCsvButton.onclick = () => {
+  const previous = detachedCsvWindow;
+  detachedCsvWindow = null;
+  detachedCsvButton.click();
+  if (!detachedCsvWindow) detachedCsvWindow = previous;
+};
 
 </script>
     <script>
