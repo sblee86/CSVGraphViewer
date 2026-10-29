@@ -82,7 +82,7 @@ with sync_playwright() as playwright:
         assert page.locator("#axisHelpWindow").get_attribute("aria-modal") == "false"
         assert "Time_s" in page.locator("#axisHelpWindow").inner_text()
         assert "X·Y·Z" in page.locator("#axisHelpWindow").inner_text()
-        page.locator("#graphSubtab-axes").click()
+        page.locator("#graphSubtab-x").click()
         assert page.locator("#x").is_visible()
         before = page.locator("#axisHelpWindow").bounding_box()
         page.locator("#axisHelpDrag").focus()

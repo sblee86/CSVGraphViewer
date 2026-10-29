@@ -155,14 +155,9 @@ const coordinateNote = document.createElement('p');
 coordinateNote.className = 'help';
 coordinateNote.textContent =
   '3D는 같은 CSV의 X·Y·Z 열을 선택하세요. T는 시간 열 또는 행 순서입니다.';
-graphSections.axes.panel.prepend(
-  xAxisCaption,
-  $('x'),
-  yCoordinateLabel,
-  zCoordinateLabel,
-  timeCoordinateLabel,
-  coordinateNote,
-);
+graphSections.x.panel.prepend(xAxisCaption, $('x'), timeCoordinateLabel);
+graphSections.y.panel.prepend(yCoordinateLabel);
+graphSections.z.panel.prepend(zCoordinateLabel, coordinateNote);
 const ySignalControls = [
   $('selection').closest('.row'),
   $('search'),
@@ -172,6 +167,11 @@ const ySignalControls = [
 ];
 function syncDimensionAxisControls() {
   const is3d = $('dimension').value === '3d';
+  graphSections.z.button.hidden = !is3d;
+  graphSubtabs.classList.toggle('has3d', is3d);
+  const zShortcut = graphContextMenu.querySelector('[data-graph-section="z"]');
+  if (zShortcut) zShortcut.hidden = !is3d;
+  if (!is3d && !graphSections.z.panel.hidden) openGraphSection('y', false, false);
   yCoordinateLabel.hidden = !is3d;
   zCoordinateLabel.hidden = !is3d;
   coordinateNote.hidden = !is3d;

@@ -170,7 +170,7 @@ seriesRows = function (col) {
 const conditionalPanel = document.createElement('section');
 conditionalPanel.id = 'conditionalSignalsPanel';
 conditionalPanel.innerHTML = `<div class="panelhead">조건별 Y신호</div><p class="help">같은 Y열도 조건별로 여러 번 그릴 수 있습니다. 예: Range_m / Target_ID = 1001, Range_m / Target_ID = 1002. 한 신호의 여러 조건은 AND입니다.</p><div class="conditionalAdd"><select id="conditionalYColumn" aria-label="조건별 Y열"></select><button id="addConditionalSignal" class="sidebarAction">조건부 Y신호 추가</button></div><div id="conditionalSignalCards"></div>`;
-graphSections.axes.panel.append(conditionalPanel);
+graphSections.y.panel.append(conditionalPanel);
 function newSignalId() {
   return 'signal-' + Date.now().toString(36) + '-' + ++conditionalSignalSerial;
 }
