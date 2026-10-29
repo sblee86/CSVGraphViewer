@@ -2382,3 +2382,45 @@ header .local.buildLabel {
   font-size: 10px !important;
   color: var(--accent);
 }
+
+.ySignalPages {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  margin: 10px 0 14px;
+}
+.ySignalPages[hidden] {
+  display: none;
+}
+.ySignalPages button {
+  white-space: normal;
+  padding: 9px 5px;
+  border: 1px solid var(--line);
+  background: var(--soft);
+}
+.ySignalPages button.on {
+  border-color: var(--accent);
+  background: var(--tint);
+  color: var(--accent);
+  font-weight: 700;
+}
+.signalColumnSearch {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  margin-bottom: 4px;
+}
+.signalColumnSearch input {
+  width: 100%;
+  min-width: 0;
+}
+.signalColumnSearch small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.conditionalAdd > .signalColumnSearch {
+  grid-column: 1 / -1;
+}
+.signalCondition > .signalColumnSearch {
+  grid-column: 1 / -1;
+}
